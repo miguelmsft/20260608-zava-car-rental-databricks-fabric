@@ -1,0 +1,48 @@
+# ---- Secrets & local environment (NEVER commit) ----
+*.env
+.env*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.publishsettings
+secrets/
+.secrets/
+.azure/
+.databrickscfg
+azure.yaml.local
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# ---- Orchestration / workflow artifacts (internal, not shipped) ----
+demo-status.md
+agent-reviews/
+research/
+archive/
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ---- Node (if any tooling) ----
+node_modules/
+
+# ---- Build / temp ----
+dist/
+build/
+*.log
+.tmp/
+tmp/
+
+# ---- OS / editor ----
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
