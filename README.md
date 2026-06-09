@@ -72,7 +72,27 @@ cp databricks/config/databricks_config.sample.json databricks/config/databricks_
 # edit both with your subscription, region, capacity, and workspace details
 ```
 
-### 2. Preflight
+### 2. Set up the Python environment
+
+The repo ships a **one-command, cross-platform** bootstrap that creates a virtual environment (`.venv`) and installs every Python dependency from **[`requirements.txt`](requirements.txt)**. It is **idempotent** (re-running reuses `.venv`) and **prefers [`uv`](https://docs.astral.sh/uv/)** when present (provisioning Python 3.12 automatically), falling back to a system Python 3.12/3.11:
+
+```powershell
+# Windows (PowerShell)
+.\scripts\setup_env.ps1
+.venv\Scripts\Activate.ps1
+```
+
+```bash
+# macOS / Linux (bash)
+./scripts/setup_env.sh
+source .venv/bin/activate
+```
+
+> **Python contract: ≥ 3.11, < 3.13** (required by Policy Weaver — plan §7). The scripts validate this and fail with an actionable message if only an unsupported interpreter is available and `uv` is absent.
+>
+> **NOT pip** — install separately (see **[`docs/prerequisites.md` §6](docs/prerequisites.md#6-tooling--pinned-versions)**): **Databricks CLI**, **Azure CLI** (`az`) + **Bicep** (`az bicep install`), and **Power BI Desktop**.
+
+### 3. Preflight
 
 Run read-only preflight checks (**[`scripts/preflight_checks.py`](scripts/preflight_checks.py)**) to surface gaps before any change is made:
 
@@ -83,7 +103,7 @@ python scripts/preflight_checks.py \
 # add --strict to promote every warning to a failure (CI gate)
 ```
 
-### 3. Preview, then deploy
+### 4. Preview, then deploy
 
 `deploy.py` is **idempotent** and honours **fresh-vs-existing** flags and optional **feature gates**. Always dry-run first — it performs **no auth and no changes**, printing the full ordered plan and every command:
 
@@ -119,7 +139,7 @@ python scripts/deploy.py --non-interactive ...
 
 Other useful flags: `--skip <wave_key>` (repeatable), `--databricks-target dev|prod`, `--resource-group`, `--subscription`, `--bicep-params`, `--verbose`.
 
-### 4. Tear down (or pause)
+### 5. Tear down (or pause)
 
 When you're finished, clean up with **[`scripts/teardown.py`](scripts/teardown.py)** (dry-run first):
 

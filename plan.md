@@ -912,6 +912,26 @@ Each step lists **Status**, **Files**, **Depends on**, **Tasks**, **Verification
 
 **Implementation Notes:** (2026-06-09) Local implementation and verification complete; awaiting reviewer verdict. Aligned the single V2 shortcut to `telematics_curated`/`Tables` in `deploy_config.sample.json` (name/path + telematics-specific placeholders & `_comment`); updated `20_create_shortcut.py` example abfss/`--shortcut-name` + name-derivation comment to `telematics_curated`. Marked `src_rentals_curated` in `40_build_thin_gold.py` as an explicit **optional/alternative, not-consumed** V2 source (paired with the runbook's 2B external-location alternative). Rewrote the runbook PATH DISCOVERY procedure to `DESCRIBE DETAIL zava.curated.telematics_curated` + create a Tables-area `telematics_curated` shortcut (all governance/network caveats preserved). Fixed `databricks/README.md` `dev` catalog `zava_dev → zava`. `manual-steps.md` §3.3 shortcut rows are table-name-agnostic (no `rentals_curated`/`Files/curated` reference) — no edit needed. Verification: JSON+AST parse OK; config_schema self-test ALL PASSED; preflight 32 tests / exit 0; dry-run prints `shortcuts/Tables/telematics_curated` and POST body `"name": "telematics_curated"` / `"path": "Tables"`; greps confirm no `zava_dev` and no `Files/curated`/`rentals_curated`-shortcut contradictions remain.
 
+#### Step 31: Reproducible Python environment (clone-and-run) — ✅ Done
+**Status:** ✅ Done
+**Files:** `requirements.txt`, `scripts/setup_env.ps1`, `scripts/setup_env.sh`, `.gitignore`, `README.md`, `docs/prerequisites.md`
+**Depends on:** Steps 1–30
+
+**Context:** Plan §7 planned a pinned `requirements.txt`/`uv.lock` "during Step 1" that was never created — dependencies are only documented prose in READMEs. Preflight (2026-06-09) confirmed the local gap: `fab`, Databricks CLI, and `semantic-link-labs` not installed, and the host default Python is **3.14** while the contract is **≥3.11, <3.13**. This step makes environment setup a single repeatable command for anyone who clones the repo.
+
+**Tasks:**
+- [ ] **`requirements.txt`** (repo root) — the complete **pip** dependency set, pinned per §7: `semantic-link-labs>=0.8.0`, `ms-fabric-cli>=1.1.0` (provides `fab`), `fabric-cicd>=0.1.14`, `policy-weaver==0.4.0` (exact), `requests>=2.31.0`, `azure-identity` (pinned min), `azure-keyvault-secrets` (used by config/secret helpers), `PyYAML>=6.0` (Policy Weaver config), plus the data-generator libs (`pandas>=2.0`, `numpy>=1.24`, `pyarrow>=12.0`) — reference/supersede `data/requirements.txt` without contradiction. Header comment must note the **<3.13** Python constraint and that **Databricks CLI**, **Azure CLI**, **Bicep**, and **Power BI Desktop** are **NOT pip** (separate installs).
+- [ ] **`scripts/setup_env.ps1` (Windows) + `scripts/setup_env.sh` (macOS/Linux)** — one-command bootstrap that is **idempotent** and **prefers `uv` when present** (`uv python install 3.12` → `uv venv --python 3.12 .venv` → `uv pip install -r requirements.txt`), and **falls back** to a system Python 3.12/3.11 via the `py` launcher / `python3.12` (`-m venv .venv` → `pip install -r requirements.txt`). It must: detect/validate the Python is ≥3.11,<3.13 (refuse 3.13+ with a clear message), upgrade pip, install `requirements.txt`, then **print next steps** (activate command + the non-pip tools still needed: Databricks CLI, and confirm `az`/`bicep`). Never hard-fail if `uv` is absent.
+- [ ] **`.gitignore`** — ensure `.venv/` (and `uv.lock` policy decision) are handled; do not commit the venv.
+- [ ] **README + `docs/prerequisites.md`** — add a "Set up the Python environment" quick-start: `./scripts/setup_env.ps1` (or `.sh`), then activate, then run `preflight_checks.py`. Keep the Databricks-CLI/Azure-CLI/Bicep/Power BI Desktop notes.
+
+**Verification:**
+- [ ] On this host: `scripts/setup_env.ps1` creates `.venv` on **Python 3.12**, installs all of `requirements.txt` successfully, and a subsequent `python scripts/preflight_checks.py` (from the venv) flips the three tool/package WARNs (`semantic-link-labs` importable; `fab` on PATH) to PASS (Databricks CLI remains a documented separate install).
+- [ ] Re-running the script is idempotent (detects existing `.venv`, no error).
+- [ ] `requirements.txt` installs cleanly under Python 3.12 (all pins resolvable, incl. `policy-weaver==0.4.0`).
+
+**Manual steps:** Databricks CLI is a standalone binary (not pip) — document its install (winget/curl/brew) in prerequisites; Power BI Desktop remains a Windows GUI install for PBIP authoring.
+
 ---
 
 ## 6. Dependency Graph / Wave Grouping (parallelization)

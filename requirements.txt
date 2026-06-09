@@ -1,0 +1,55 @@
+# =============================================================================
+# Zava Databricks + Fabric demo — complete pip dependency set
+# =============================================================================
+# Clone-and-run: create a virtual environment and install every Python
+# dependency this repo's scripts import, with ONE command:
+#
+#     Windows  :  .\scripts\setup_env.ps1
+#     macOS/Linux: ./scripts/setup_env.sh
+#
+# Or manually (inside a virtual environment):
+#
+#     pip install -r requirements.txt
+#
+# -----------------------------------------------------------------------------
+# Python version contract:  >= 3.11, < 3.13   (REQUIRED)
+# -----------------------------------------------------------------------------
+# Policy Weaver (== 0.4.0, Beta) constrains the supported interpreter to
+# Python 3.11 or 3.12. Python 3.13+ and 3.10- are NOT supported (plan §7, R5).
+# The setup scripts validate this and prefer `uv` (which can provision 3.12
+# even when the host only has newer interpreters installed).
+#
+# -----------------------------------------------------------------------------
+# NOT pip — install these SEPARATELY (see docs/prerequisites.md §6):
+# -----------------------------------------------------------------------------
+#   * Databricks CLI    (standalone binary — winget / curl / brew)
+#   * Azure CLI         (`az`) + Bicep (`az bicep install`)
+#   * Power BI Desktop  (Windows GUI install — PBIP/PBIR authoring)
+# These are external tools, NOT Python packages, and cannot be pip-installed.
+#
+# Versions are pinned tested minimums (not `latest`) to reduce drift on
+# preview APIs for a public, reusable demo (plan §7). `policy-weaver` is an
+# EXACT pin because it is Beta.
+# =============================================================================
+
+# ---- Fabric automation (CLI + item deployment) -----------------------------
+semantic-link-labs>=0.8.0      # sempy_labs — Direct Lake model generation + TOM
+ms-fabric-cli>=1.1.0           # provides the `fab` CLI — Fabric REST/CLI automation
+fabric-cicd>=0.1.14            # deploy Fabric items (report, Data Agent ALM) from repo
+
+# ---- Governance: Unity Catalog -> OneLake security -------------------------
+policy-weaver==0.4.0           # EXACT pin (Beta) — UC access policies -> OneLake security
+
+# ---- Azure SDK + REST helpers ----------------------------------------------
+requests>=2.31.0               # Fabric REST calls (Data Agent, Activator, Eventhouse)
+azure-identity>=1.17.0         # DefaultAzureCredential (token acquisition)
+azure-keyvault-secrets>=4.8.0  # SecretClient (config / secret helpers)
+PyYAML>=6.0                    # Policy Weaver config (yaml import)
+
+# ---- Synthetic data generators (data/*.py) ---------------------------------
+# Consolidated here from data/requirements.txt (identical pins — no conflict).
+# This file is the single source of truth; `pip install -r requirements.txt`
+# covers the data generators too.
+pandas>=2.0                    # synthetic data generators
+numpy>=1.24                    # synthetic data generators
+pyarrow>=12.0                  # Parquet output for generators (df.to_parquet)

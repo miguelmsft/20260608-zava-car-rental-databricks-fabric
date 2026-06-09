@@ -335,6 +335,58 @@ deployment.
 > enhancement (Step 20). The default Fabric Activator **Email** alert path (Step 19) needs no
 > Teams (R11 §6).
 
+### 6.1 Set up the Python environment (one command)
+
+The **pip** packages above are captured in the tracked **[`requirements.txt`](../requirements.txt)**
+at the repo root. Use the cross‑platform bootstrap script to create a virtual environment
+(`.venv`) and install them all in **one command**. It is **idempotent** (re‑running reuses an
+existing `.venv`) and **prefers [`uv`](https://docs.astral.sh/uv/)** when present — `uv`
+provisions Python **3.12** automatically even if the host only has a newer interpreter — and
+falls back to a system Python **3.12/3.11**:
+
+```powershell
+# Windows (PowerShell)
+.\scripts\setup_env.ps1            # optional: -PythonVersion 3.11   |   -Help
+.venv\Scripts\Activate.ps1
+python scripts\preflight_checks.py
+```
+
+```bash
+# macOS / Linux (bash)
+./scripts/setup_env.sh             # optional: --python-version 3.11 |   --help
+source .venv/bin/activate
+python scripts/preflight_checks.py
+```
+
+> **Python contract: ≥ 3.11, < 3.13.** Policy Weaver (`policy-weaver==0.4.0`, Beta) does not
+> support Python 3.13+ or 3.10‑. The scripts **validate** the interpreter and, when only an
+> unsupported version is available and `uv` is absent, **fail with an actionable message**
+> (install `uv`, or install Python 3.12) rather than building a broken venv.
+
+**If you don't have `uv`,** install it once (recommended — it handles the Python version for you):
+
+```powershell
+winget install --id=astral-sh.uv -e        # Windows
+# or:  irm https://astral.sh/uv/install.ps1 | iex
+```
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh   # macOS / Linux
+# or:  brew install uv
+```
+
+#### Tools that are NOT pip (install separately)
+
+`requirements.txt` covers only Python packages. The following are standalone tools and must be
+installed via their own installers (rows in the table above):
+
+| Tool | Install |
+|---|---|
+| **Databricks CLI** | `winget install Databricks.DatabricksCLI` (Windows) · `brew install databricks/tap/databricks` (macOS) · [docs](https://learn.microsoft.com/en-us/azure/databricks/dev-tools/cli/) |
+| **Azure CLI** (`az`) | [install docs](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli) — confirm with `az version` |
+| **Bicep** | `az bicep install` — confirm with `az bicep version` |
+| **Power BI Desktop** | [download](https://powerbi.microsoft.com/desktop/) (Windows GUI — PBIP/PBIR authoring) |
+
 ---
 
 ## 7. Databricks‑side prerequisites
