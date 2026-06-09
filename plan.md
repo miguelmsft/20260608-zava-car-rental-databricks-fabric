@@ -347,8 +347,8 @@ Each step lists **Status**, **Files**, **Depends on**, **Tasks**, **Verification
 
 **Manual steps:** none.
 
-#### Step 2: Prerequisites, tenant-settings & SP setup docs — ⬜ Not started
-**Status:** ⬜ Not started
+#### Step 2: Prerequisites, tenant-settings & SP setup docs — ✅ Done
+**Status:** ✅ Done
 **Files:** `docs/prerequisites.md`, `docs/manual-steps.md` (create skeleton)
 **Depends on:** Step 1
 
@@ -386,8 +386,8 @@ Each step lists **Status**, **Files**, **Depends on**, **Tasks**, **Verification
 
 ### Phase 1 — Azure Infrastructure (Bicep)
 
-#### Step 4: Cost checkpoint + capacity pause/resume scripts — ⬜ Not started
-**Status:** ⬜ Not started
+#### Step 4: Cost checkpoint + capacity pause/resume scripts — ✅ Done
+**Status:** ✅ Done
 **Files:** `docs/cost.md`, `scripts/pause_capacity.py`, `scripts/resume_capacity.py`
 **Depends on:** Step 1
 
@@ -403,8 +403,8 @@ Each step lists **Status**, **Files**, **Depends on**, **Tasks**, **Verification
 
 **Manual steps:** Pre-deploy **cost acknowledgement** by the customer (documented gate).
 
-#### Step 5: Bicep — Fabric capacity module — ⬜ Not started
-**Status:** ⬜ Not started
+#### Step 5: Bicep — Fabric capacity module — ✅ Done
+**Status:** ✅ Done
 **Files:** `infra/modules/fabric-capacity.bicep`, `infra/main.bicep` (wire-in), `infra/params/dev.bicepparam`
 **Depends on:** Step 1, Step 4
 **Provisioning flag:** skipped when `capacity.use_existing=true` (consume existing capacity id).
@@ -421,23 +421,25 @@ Each step lists **Status**, **Files**, **Depends on**, **Tasks**, **Verification
 
 **Manual steps:** none (capacity is Bicep-automatable — R9).
 
-#### Step 6: Bicep — Databricks workspace, Access Connector, ADLS Gen2, Key Vault — ⬜ Not started
-**Status:** ⬜ Not started
+#### Step 6: Bicep — Databricks workspace, Access Connector, ADLS Gen2, Key Vault — ✅ Done
+**Status:** ✅ Done
 **Files:** `infra/modules/databricks-workspace.bicep`, `infra/modules/access-connector.bicep`, `infra/modules/storage-adls.bicep`, `infra/modules/keyvault.bicep`, `infra/main.bicep` (wire-in)
 **Depends on:** Step 1
 **Provisioning flag:** skipped when `databricks.workspace.use_existing=true`.
 
 **Tasks:**
-- [ ] Author `Microsoft.Databricks/workspaces` (Premium SKU — UC requires it, R8), `Microsoft.Databricks/accessConnectors` (managed identity), ADLS Gen2 (HNS) for UC managed storage + external location, Key Vault (R8). Region East US 2.
-- [ ] Role assignments: Access Connector MI → Storage Blob Data Contributor on the ADLS account (R8).
-- [ ] Parameterize names/region; support existing-resource pass-through outputs.
+- [x] Author `Microsoft.Databricks/workspaces` (Premium SKU — UC requires it, R8), `Microsoft.Databricks/accessConnectors` (managed identity), ADLS Gen2 (HNS) for UC managed storage + external location, Key Vault (R8). Region East US 2.
+- [x] Role assignments: Access Connector MI → Storage Blob Data Contributor on the ADLS account (R8).
+- [x] Parameterize names/region; support existing-resource pass-through outputs.
 
 **Verification:**
-- [ ] `az bicep build` succeeds for each module and `main.bicep`.
+- [x] `az bicep build` succeeds for each module and `main.bicep`.
 - [ ] `what-if` (fresh) shows Premium workspace + access connector + ADLS(HNS) + Key Vault + role assignment.
 - [ ] Existing path: with `databricks.workspace.use_existing=true`, what-if creates no Databricks resources.
 
 **Manual steps:** none.
+
+**Implementation Notes (2026-06-08):** Authored 4 modules (`access-connector.bicep`, `databricks-workspace.bicep`, `storage-adls.bicep`, `keyvault.bicep`) + `infra/main.bicep` wiring. Resource shapes follow R8 §2.3–2.6: workspace `Microsoft.Databricks/workspaces@2024-05-01` (Premium SKU, `accessConnector` MI attach, `defaultCatalog.initialType=UnityCatalog`); access connector `@2024-05-01` system-assigned MI; ADLS `Microsoft.Storage/storageAccounts@2023-05-01` `StorageV2`+`isHnsEnabled=true` with Storage Blob Data Contributor role assignment (`ba92f5b4-…`) scoped to the storage account; Key Vault `@2023-07-01` RBAC-enabled, no secrets. `main.bicep` gates Databricks resources behind `!useExistingDatabricks` and emits pass-through outputs on the existing path (workspace url/id, access connector id, storage name, KV uri). Params are consistent with Step 1 `databricks_config` (sku=premium, managed_storage_account=zavauc, access_connector) and the `dev`/`existing-resources` bicepparam files. **Verification:** `az bicep build` (CLI 0.43.8) exits 0 with 0 errors for all 5 files; `az bicep build-params` validates both `.bicepparam` files against `main.bicep` (0 errors). Remaining lint warnings are intentional `no-unused-params` for the Fabric-capacity params (Step 5 wires them; declared here so the shared param files validate). `what-if` items left unchecked — Phase 0 is author-only (no deploy); what-if requires `az login` + a target RG, deferred. Local implementation and verification complete; awaiting reviewer verdict.
 
 #### Step 7: Bicep — author ADLS network-hardening module (Variation 2) — ⬜ Not started
 **Status:** ⬜ Not started
@@ -460,8 +462,8 @@ Each step lists **Status**, **Files**, **Depends on**, **Tasks**, **Verification
 
 ### Phase 2 — Databricks Data Foundation
 
-#### Step 8: Unity Catalog setup, grants, medallion notebooks, certified gold (Variation 1 source) — ⬜ Not started
-**Status:** ⬜ Not started
+#### Step 8: Unity Catalog setup, grants, medallion notebooks, certified gold (Variation 1 source) — 🔄 In progress
+**Status:** 🔄 In progress
 **Files:** `databricks/uc/01_metastore_external_access.sql`, `databricks/uc/02_catalog_schema.sql`, `databricks/uc/03_grants_mirroring.sql`, `databricks/uc/04_certify_gold.sql`, `databricks/notebooks/00_generate_synthetic_data.py`, `databricks/notebooks/10_bronze.py`, `databricks/notebooks/20_silver.py`, `databricks/notebooks/30_gold.py`, `databricks/bundle/databricks.yml`
 **Depends on:** Step 3, Step 6
 

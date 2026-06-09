@@ -63,6 +63,9 @@ _tmp/
 # ---- Generated demo data output & scratch (never commit) ----
 data/output/
 
+# ---- Compiled Bicep ARM output (validate with `bicep build --stdout`; do not commit) ----
+infra/**/*.json
+
 # ---- OS / editor ----
 .DS_Store
 Thumbs.db

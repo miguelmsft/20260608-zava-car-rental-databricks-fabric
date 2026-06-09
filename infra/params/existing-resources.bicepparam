@@ -35,6 +35,12 @@ param databricksSku = 'premium'
 param existingDatabricksWorkspaceId = '/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/<RESOURCE_GROUP>/providers/Microsoft.Databricks/workspaces/<WORKSPACE_NAME>'
 param existingDatabricksHostUrl = 'https://adb-<WORKSPACE_ID>.<N>.azuredatabricks.net'
 
+// ---- Existing Unity Catalog Access Connector (required on the existing path) ----
+// Downstream UC storage-credential + mirroring/shortcut automation needs the
+// Access Connector ARM id and its managed-identity principal (object) id.
+param existingAccessConnectorId = '/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/<RESOURCE_GROUP>/providers/Microsoft.Databricks/accessConnectors/<ACCESS_CONNECTOR_NAME>'
+param existingAccessConnectorPrincipalId = '<ACCESS_CONNECTOR_PRINCIPAL_OBJECT_ID>'
+
 // ---- ADLS Gen2 managed storage (Unity Catalog) ----
 param managedStorageAccountName = 'zavauc'
 
