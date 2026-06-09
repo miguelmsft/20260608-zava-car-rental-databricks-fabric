@@ -760,25 +760,25 @@ Each step lists **Status**, **Files**, **Depends on**, **Tasks**, **Verification
 
 ### Phase 7 — Orchestration, Docs, Validation
 
-#### Step 23: End-to-end orchestrator, preflight & teardown — ⬜ Not started
-**Status:** ⬜ Not started
+#### Step 23: End-to-end orchestrator, preflight & teardown — ✅ Done
+**Status:** ✅ Done
 **Files:** `scripts/deploy.py`, `scripts/preflight_checks.py`, `scripts/teardown.py`
 **Depends on:** Steps 5–22
 
 **Tasks:**
-- [ ] `preflight_checks.py`: validate config via `config_schema.py`; verify tenant settings, SP access, capacity state, tool versions; **region check** — reject East US/South Central US **only when `enable_operations_agent=true`** (the optional Operations Agent excludes those regions; the default Activator email path works in all Fabric regions); when `enable_operations_agent=true`, also verify a Microsoft Teams account is available (R7, R9, R11).
+- [ ] `preflight_checks.py`: validate config via `config_schema.py` (the **authoritative region contract** — curated allow-list `eastus2` primary / `westus` backup, §1.7); verify tenant settings, SP access, capacity SKU **and live capacity state (Active/Paused/Resumed)**, tool versions; **region check** — surface config_schema's region verdict and explain *why* East US / South Central US are excluded (the optional Operations Agent (GA) is unavailable there; the Teams-free Activator email path is itself region-agnostic, but the full demo is validated only for `eastus2`/`westus`, so the allow-list is enforced unconditionally — no unreachable "would-pass" branch); when `enable_operations_agent=true`, **additionally** verify a Microsoft Teams account is available. The genuinely-conditional gate is the Teams check (R7, R9, R11).
 - [ ] `deploy.py`: idempotent wave-based orchestration honoring fresh-vs-existing flags; pause/skip points at user-token/manual steps with clear prompts; retry/backoff wrappers for long-running Fabric REST + 15-min mirror waits.
 - [ ] `teardown.py`: safe, ordered teardown (rollback for destructive ops; capacity pause/delete last) — confirm-before-destroy.
 
 **Verification:**
-- [ ] `python scripts/preflight_checks.py` passes against a configured tenant (or clearly reports gaps), including the conditional region/Operations-Agent + Teams check (only enforced when `enable_operations_agent=true`).
+- [ ] `python scripts/preflight_checks.py` passes against a configured tenant (or clearly reports gaps), including the **unconditional** region allow-list check (`eastus2`/`westus`), the **live capacity-state probe**, and the **conditional Teams check** (enforced only when `enable_operations_agent=true`).
 - [ ] `deploy.py --dry-run` prints the full ordered plan with manual-step pauses.
 - [ ] `teardown.py --dry-run` lists resources to remove in safe order; requires explicit `--yes` to execute.
 
 **Manual steps:** Orchestrator **pauses** at each documented user-token/UI step (mirroring OAuth, Workspace Identity, ontology gen, Eventstream connection, Activator rule design-mode validation, and the optional Operations Agent Teams wiring).
 
-#### Step 24: Component READMEs + architecture/cost docs — ⬜ Not started
-**Status:** ⬜ Not started
+#### Step 24: Component READMEs + architecture/cost docs — ✅ Done
+**Status:** ✅ Done
 **Files:** `infra/README.md`, `databricks/README.md`, `fabric/README.md`, `data/README.md`, `docs/architecture.md`, `docs/runbook-end-to-end.md`
 **Depends on:** Steps 1–22
 
@@ -792,8 +792,8 @@ Each step lists **Status**, **Files**, **Depends on**, **Tasks**, **Verification
 
 **Manual steps:** none.
 
-#### Step 25: Top-level README update — ⬜ Not started
-**Status:** ⬜ Not started
+#### Step 25: Top-level README update — ✅ Done
+**Status:** ✅ Done
 **Files:** `README.md`
 **Depends on:** Step 24
 
@@ -807,8 +807,8 @@ Each step lists **Status**, **Files**, **Depends on**, **Tasks**, **Verification
 
 **Manual steps:** none.
 
-#### Step 26: Consolidated Manual Steps Appendix — ⬜ Not started
-**Status:** ⬜ Not started
+#### Step 26: Consolidated Manual Steps Appendix — ✅ Done
+**Status:** ✅ Done
 **Files:** `docs/manual-steps.md`
 **Depends on:** Steps 2, 7, 10, 11, 12, 16, 17, 18, 19, 20, 21, 22
 
