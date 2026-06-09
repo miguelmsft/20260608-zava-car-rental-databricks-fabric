@@ -192,10 +192,14 @@ at least once and produced its curated **managed** outputs
 
 **Why:** Variation 2 does **not** mirror these tables — streaming tables and materialized
 views are **Unity Catalog managed tables** and are explicitly **excluded from Fabric Azure
-Databricks mirroring** (R10 §2.3). Instead, the Step-12 script
+Databricks mirroring** (R10 §2.3). The **default** flow surfaces the `telematics_curated`
+**streaming table** (the V2 signal `40_build_thin_gold.py` consumes into
+`agg_telematics_freshness`, which the semantic model + report bind to). The Step-12 script
 (`fabric/scripts/20_create_shortcut.py`) creates a **OneLake shortcut** straight to the
-Databricks-managed ADLS Gen2 storage that backs the table (**sub-pattern 2A**). To create
-that shortcut you must first obtain the concrete `abfss://` path of the managed storage.
+Databricks-managed ADLS Gen2 storage that backs the table (**sub-pattern 2A**), placing it in
+the Lakehouse **`Tables`** area with name **`telematics_curated`** so Direct Lake recognizes it
+and `spark.table("telematics_curated")` resolves by bare name. To create that shortcut you must
+first obtain the concrete `abfss://` path of the managed storage.
 
 ### Procedure (sub-pattern 2A — shortcut managed storage)
 
@@ -205,10 +209,10 @@ Run the following in a **Databricks SQL editor / notebook** against the pipeline
 -- DESCRIBE DETAIL returns a 'location' column carrying the abfss:// managed-storage path.
 -- For a UC MANAGED table the path is under the catalog/schema managed-storage root, in the
 -- hashed `__unitystorage` layout (see below).
-DESCRIBE DETAIL zava.curated.rentals_curated;
+DESCRIBE DETAIL zava.curated.telematics_curated;
 
 -- Alternatively, inspect the table's extended metadata (look for "Storage Location"):
-DESCRIBE EXTENDED zava.curated.rentals_curated;
+DESCRIBE EXTENDED zava.curated.telematics_curated;
 ```
 
 - The `location` value looks like:
@@ -217,8 +221,10 @@ DESCRIBE EXTENDED zava.curated.rentals_curated;
   has a unique, non-obvious location; the fully-qualified path is tracked as the table's
   **Storage Location** in Unity Catalog.
 - Feed that `abfss://` path into the Step-12 shortcut creation (point the shortcut at the
-  table directory — at least one level below the container, never the container root — per
-  R10 §5.3).
+  `telematics_curated` table directory — at least one level below the container, never the
+  container root — per R10 §5.3). Set `deploy_config.json` `shortcut.name="telematics_curated"`
+  and `shortcut.path="Tables"` (the sample default) so the created shortcut matches the
+  notebook read + model/report binding.
 
 ### ⚠️ Governance caveat (R10 §5.1 — narrate this, it is not a click)
 

@@ -892,6 +892,26 @@ Each step lists **Status**, **Files**, **Depends on**, **Tasks**, **Verification
 - **Scope-compliance note:** the new model tables are defined **inline** in `model.tmdl` (the only semantic-model file in Step-29 scope) rather than as new `tables/*.tmdl` files; no `relationships.tmdl` edit (out of scope), so the two new aggregates are self-contained for their single-table visuals (no orphan report bindings). If the reviewer prefers externalized table files / explicit relationships, that needs a file-scope amendment.
 - Verification run: `ast.parse` of the 3 Python files → OK; `json.load` of all `fabric/report/**/*.json` → OK; `deploy.py --dry-run` → exit 0, thin_gold wave prints `fab import` + `fab job run-sync /…/40_build_thin_gold.Notebook -P lakehouse=…,catalog=…,source_schema=…,target_schema=…,source_curated_schema=`; semantic-model dry-run now spans **11 tables** incl. `agg_revenue_by_site_month` + `agg_telematics_freshness`. No hardcoded secrets.
 
+#### Step 30: V2 shortcut ↔ notebook coherence — ✅ Done
+**Status:** ✅ Done
+**Files:** `fabric/config/deploy_config.sample.json`, `fabric/scripts/20_create_shortcut.py`, `fabric/scripts/40_build_thin_gold.py`, `docs/runbook-end-to-end.md`, `docs/manual-steps.md`, `databricks/README.md`
+**Depends on:** Steps 28, 29
+
+**Tasks:**
+- [x] **🟡 Align the V2 shortcut with the consumed table.** Step 29 made `40_build_thin_gold.py` read `telematics_curated` (the only V2 table actually consumed; `rentals_curated` is defined but unused), but the Step-12 shortcut config still defaults to `name="rentals_curated"` + `path="Files/curated"`. Make the default V2 shortcut surface **`telematics_curated`** as a **`Tables/`-area** shortcut so `spark.table("telematics_curated")` resolves: set `deploy_config.sample.json` `shortcut.name="telematics_curated"`, `shortcut.path="Tables"` (the script's own `DEFAULT_SHORTCUT_PARENT_PATH`), and update the `adls_subpath`/`abfss_path` placeholder + `_comment` to point at the `telematics_curated` managed-table location. Ensure `20_create_shortcut.py` has no `rentals_curated` hardcoding in defaults/help/docstrings that contradicts this.
+- [x] **Resolve the orphan ref.** In `40_build_thin_gold.py`, remove or clearly mark `src_rentals_curated` as an optional/alternative V2 source (it is not consumed) so there is no dangling expectation; the consumed V2 signal is `telematics_curated → agg_telematics_freshness`.
+- [x] **Docs coherence.** Update the runbook **PATH DISCOVERY** procedure (and any `docs/manual-steps.md` shortcut step) to discover/create the `telematics_curated` shortcut (Tables area), matching the notebook read + model/report binding. Keep the security/network caveats.
+- [x] **🟢 Stale catalog doc.** `databricks/README.md` still says the `dev` target uses catalog `zava_dev`; update it to `zava` to match the Step-28 one-catalog contract (`databricks/bundle/databricks.yml`).
+
+**Verification:**
+- [x] `python scripts/deploy.py --dry-run` previews a V2 shortcut whose item/table name (`telematics_curated`, Tables area) exactly matches what `40_build_thin_gold.py` reads and the model/report bind to.
+- [x] `python scripts/config_schema.py` self-test + `python scripts/test_preflight_checks.py` still pass; `deploy_config.sample.json` parses.
+- [x] No doc references a `zava_dev` default catalog or a `rentals_curated`-only V2 path that contradicts the notebook.
+
+**Manual steps:** the shortcut creation remains a documented manual/secured step (Step 12) — only the **target table name + placement** change to `telematics_curated` / `Tables`.
+
+**Implementation Notes:** (2026-06-09) Local implementation and verification complete; awaiting reviewer verdict. Aligned the single V2 shortcut to `telematics_curated`/`Tables` in `deploy_config.sample.json` (name/path + telematics-specific placeholders & `_comment`); updated `20_create_shortcut.py` example abfss/`--shortcut-name` + name-derivation comment to `telematics_curated`. Marked `src_rentals_curated` in `40_build_thin_gold.py` as an explicit **optional/alternative, not-consumed** V2 source (paired with the runbook's 2B external-location alternative). Rewrote the runbook PATH DISCOVERY procedure to `DESCRIBE DETAIL zava.curated.telematics_curated` + create a Tables-area `telematics_curated` shortcut (all governance/network caveats preserved). Fixed `databricks/README.md` `dev` catalog `zava_dev → zava`. `manual-steps.md` §3.3 shortcut rows are table-name-agnostic (no `rentals_curated`/`Files/curated` reference) — no edit needed. Verification: JSON+AST parse OK; config_schema self-test ALL PASSED; preflight 32 tests / exit 0; dry-run prints `shortcuts/Tables/telematics_curated` and POST body `"name": "telematics_curated"` / `"path": "Tables"`; greps confirm no `zava_dev` and no `Files/curated`/`rentals_curated`-shortcut contradictions remain.
+
 ---
 
 ## 6. Dependency Graph / Wave Grouping (parallelization)

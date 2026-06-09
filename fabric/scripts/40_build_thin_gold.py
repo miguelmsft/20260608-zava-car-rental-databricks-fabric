@@ -196,14 +196,22 @@ src_dim_vehicle = "dim_vehicle"
 src_kpi_one_way_flows = "kpi_one_way_flows"
 src_kpi_maintenance_cost = "kpi_maintenance_cost"
 
-# Variation 2 (Lakeflow -> OneLake shortcut) curated source tables. These UC **managed** outputs
-# (a streaming table + a materialized view) CANNOT be mirrored, so they reach Fabric through the
-# Step-12 OneLake shortcut and land under the Lakehouse `Tables/` folder — reachable by bare name
-# by default, or under `source_curated_schema` on a schema-enabled Lakehouse. Reading at least one
-# of them here is what makes the report **demonstrably** show V2 shortcut data, not just V1 gold.
+# Variation 2 (Lakeflow -> OneLake shortcut) curated source table. The **default** flow surfaces a
+# single UC **managed** streaming table (`telematics_curated`) through the Step-12 OneLake shortcut,
+# landing it under the Lakehouse `Tables/` folder — reachable by bare name by default, or under
+# `source_curated_schema` on a schema-enabled Lakehouse. Reading it here is what makes the report
+# **demonstrably** show V2 shortcut data, not just V1 gold. It is the ONLY V2 table consumed below
+# (-> `agg_telematics_freshness`), and it matches `deploy_config.sample.json` `shortcut.name`
+# (`telematics_curated`, `Tables` area) so `read_curated("telematics_curated")` resolves on a
+# default deploy.
 source_curated_schema = ""                       # "" => curated tables reachable by bare name (shortcut landing)
-src_telematics_curated = "telematics_curated"    # V2 STREAMING TABLE (Lakeflow) — not mirrorable
-src_rentals_curated = "rentals_curated"          # V2 MATERIALIZED VIEW (Lakeflow) — not mirrorable
+src_telematics_curated = "telematics_curated"    # V2 STREAMING TABLE (Lakeflow) — not mirrorable; CONSUMED below
+# OPTIONAL / ALTERNATIVE V2 source — NOT created by the default flow and NOT consumed here. The
+# default deploy provisions a single `telematics_curated` shortcut. If you additionally shortcut the
+# Lakeflow `rentals_curated` materialized view (a second Tables-area shortcut you create yourself),
+# you can read it via `read_curated(src_rentals_curated)`; left unread by design so there is no
+# dangling expectation of a second shortcut on a vanilla deploy.
+src_rentals_curated = "rentals_curated"          # V2 MATERIALIZED VIEW (Lakeflow) — optional, not consumed
 
 # Informational parameters passed by scripts/deploy.py for cross-check / lineage. The attached
 # Fabric Lakehouse provides OneLake access; these are NOT used to qualify table names here.

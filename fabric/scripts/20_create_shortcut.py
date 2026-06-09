@@ -94,8 +94,8 @@ Usage
         --workspace-id 00000000-0000-0000-0000-000000000000 \
         --lakehouse-name zava_lakehouse \
         --connection-id 11111111-1111-1111-1111-111111111111 \
-        --abfss-path abfss://unitycatalog@zavauc.dfs.core.windows.net/__unitystorage/rentals_curated \
-        --shortcut-name rentals_curated
+        --abfss-path abfss://unitycatalog@zavauc.dfs.core.windows.net/__unitystorage/telematics_curated \
+        --shortcut-name telematics_curated
 """
 
 from __future__ import annotations
@@ -389,7 +389,7 @@ def resolve_plan(
         or _clean(sc_cfg.get("name"))
     )
     if not name:
-        # Derive the shortcut name from the final segment of the target path (e.g. rentals_curated).
+        # Derive the shortcut name from the final segment of the target path (e.g. telematics_curated).
         tail = [seg for seg in subpath.split("/") if seg]
         name = tail[-1] if tail else "curated_shortcut"
 

@@ -123,8 +123,10 @@ Then apply the access policies and (later) sync them to Fabric:
 # Run uc/05_access_policies.sql as the OWNER of the target tables (SQL editor or a SQL task).
 ```
 
-> **Targets:** `dev` (default, `mode: development`, catalog `zava_dev`) and `prod`
-> (`mode: production`, runs as a service principal, catalog `zava`). Pick with `-t`.
+> **Targets:** `dev` (default, `mode: development`, catalog `zava`) and `prod`
+> (`mode: production`, runs as a service principal, catalog `zava`). Both targets build the
+> **same one catalog** `zava` (Step-28 catalog-coherence contract — see
+> `databricks/bundle/databricks.yml`). Pick with `-t`.
 
 ---
 

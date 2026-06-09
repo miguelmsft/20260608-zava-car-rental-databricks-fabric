@@ -48,15 +48,15 @@
   },
 
   "shortcut": {
-    "_comment": "Variation 2 — secured OneLake shortcut (read by 20_create_shortcut.py). connection_id is the ADLS Gen2 shortcut connection (manual consent, Step 12). Provide the ADLS target as abfss_path OR adls_location + adls_subpath (discover via the runbook PATH DISCOVERY procedure).",
+    "_comment": "Variation 2 — secured OneLake shortcut (read by 20_create_shortcut.py). The default V2 signal consumed by 40_build_thin_gold.py is the Lakeflow `telematics_curated` STREAMING TABLE (UC-managed, NOT mirrorable), surfaced via this shortcut. name/path land it as a Tables-area shortcut (`Tables` matches the script's DEFAULT_SHORTCUT_PARENT_PATH) so Direct Lake auto-recognizes it and `spark.table(\"telematics_curated\")` resolves by bare name, matching the model/report binding to agg_telematics_freshness. connection_id is the ADLS Gen2 shortcut connection (manual consent, Step 12). Provide the ADLS target as abfss_path OR adls_location + adls_subpath — discover the `telematics_curated` managed-table storage location via the runbook PATH DISCOVERY procedure (DESCRIBE DETAIL zava.curated.telematics_curated).",
     "connection_id": "<ADLS_SHORTCUT_CONNECTION_ID>",
-    "abfss_path": "<ABFSS_MANAGED_STORAGE_PATH>",
+    "abfss_path": "<ABFSS_TELEMATICS_CURATED_MANAGED_STORAGE_PATH>",
     "adls_location": "<ADLS_DFS_ENDPOINT_URL>",
-    "adls_subpath": "<ADLS_CURATED_SUBPATH>",
+    "adls_subpath": "<ADLS_TELEMATICS_CURATED_SUBPATH>",
     "lakehouse_id": "<LAKEHOUSE_GUID>",
     "lakehouse_name": "zava-lakehouse",
-    "name": "rentals_curated",
-    "path": "Files/curated"
+    "name": "telematics_curated",
+    "path": "Tables"
   },
 
   "lakehouse": {
