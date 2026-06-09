@@ -1,0 +1,125 @@
+{
+  "_comment": "Zava Fabric Activator (Reflex) item definition — the 'ReflexEntities.json' part (plan Step 19; R11 §6c). This is the DEFAULT, Teams-FREE watch+act path for the Zava demo: a Reflex rule whose action is a first-class 'EmailMessage' (no Microsoft Teams, no Power Automate). It is deployed as code by fabric/scripts/78_create_activator_email.py via POST /v1/workspaces/{id}/reflexes with definition.format='json' and a single 'ReflexEntities.json' part (InlineBase64) plus a '.platform' part. ReflexEntities.json holds 'the complete Activator configuration including containers, data sources, objects, attributes, and rules' (Reflex definition article). The __ZAVA_* placeholder tokens and the all-zero GUIDs are substituted at deploy time by 78_create_activator_email.py from deploy_config + the ids of the workspace/KQL database resolved by name. NO secrets: alerting.site_manager_email is a placeholder address and is never committed as a real value. Authoring/validating the rule in Activator design mode (Monitor -> Condition -> Email Action) is a UI-assisted nuance, but the item + this definition deploy as code — verify this rule body against the live Reflex schema before relying on the scripted path.",
+  "_comment_provenance": "The endpoint shape, the part path 'ReflexEntities.json', the action kinds 'EmailMessage'/'FabricItemInvocation', and the EmailMessage configuration property names (messageLocale, sentTo, copyTo, bCCTo, subject, headline, optionalMessage, additionalInformation) are verbatim from the Microsoft Learn Reflex definition reference (R11 §6c). The surrounding dataSources/objects/rules envelope is illustrative and MUST be verified against the live Reflex schema with a smoke test (R11 §6c provenance note).",
+  "schemaVersion": "1.0",
+
+  "dataSources": [
+    {
+      "name": "ZavaTelematicsEventhouse",
+      "type": "KustoDatabase",
+      "_comment": "DEFAULT (Teams-free) binding: the Step-18 Eventhouse KQL database / Telematics table (R11 §6c — Activator monitors Eventhouse properties). workspaceId/itemId are zero-GUID placeholders that 78_create_activator_email.py replaces with the real workspace id and the KQL database item id (resolved by realtime.kql_database_name). databaseName/tableName tokens are replaced from realtime.kql_database_name / realtime.kql_table_name. This GA-only Eventhouse binding keeps the email alert working even when the only preview item (Ontology) is unavailable.",
+      "properties": {
+        "workspaceId": "00000000-0000-0000-0000-000000000000",
+        "itemId": "00000000-0000-0000-0000-000000000000",
+        "databaseName": "__ZAVA_KQL_DATABASE_NAME__",
+        "tableName": "__ZAVA_KQL_TABLE_NAME__"
+      }
+    }
+  ],
+
+  "_comment_ontology_binding": "OPTIONAL ENRICHMENT (only when features.enable_ontology=true): Fabric Activator can also build rules directly on Fabric Ontology business entities (preview) — the same modeled Zava concepts (idle-vehicle / overdue-maintenance) the Operations Agent reasons over (R11 §6c). To enable the richer ontology-entity binding, add a second dataSource of type 'OntologyBusinessEntity' alongside the Eventhouse source and point the rule 'monitor.dataSource' at it, e.g.: { \"name\": \"ZavaVehicleOntology\", \"type\": \"OntologyBusinessEntity\", \"properties\": { \"workspaceId\": \"00000000-0000-0000-0000-000000000000\", \"ontologyItemId\": \"00000000-0000-0000-0000-000000000000\", \"entityName\": \"Vehicle\" } }. This is intentionally a COMMENTED note (not an active dataSource) so the default deploy stays Teams-free AND ontology-free; the default rules below bind to the Eventhouse property and do NOT require Ontology.",
+
+  "objects": [
+    {
+      "name": "Vehicle",
+      "keyColumn": "vehicle_id",
+      "dataSource": "ZavaTelematicsEventhouse",
+      "_comment": "The monitored Zava business object (a vehicle), keyed by vehicle_id (R11 §5: identify the business object key). Attributes map 1:1 to the flat Telematics columns documented in fabric/realtime/eventhouse_setup.kql.",
+      "attributes": [
+        {
+          "name": "idle_minutes",
+          "column": "idle_minutes",
+          "type": "int",
+          "description": "Minutes the vehicle has been idle. Idle-vehicle alert fires when idle_minutes > 120."
+        },
+        {
+          "name": "fault_code",
+          "column": "fault_code",
+          "type": "string",
+          "description": "OBD-II-like diagnostic trouble code; empty when healthy. Non-empty => maintenance/fault alert (proxy for overdue maintenance)."
+        },
+        {
+          "name": "site_id",
+          "column": "site_id",
+          "type": "string",
+          "description": "Home/nearest Zava rental site (FK to Sites.site_id). Used to route the site-manager alert and as a FabricItemInvocation parameter."
+        }
+      ]
+    }
+  ],
+
+  "rules": [
+    {
+      "name": "IdleVehicleEmailAlert",
+      "_comment": "DEFAULT rule #1 (Teams-free). A SINGLE numeric-threshold condition (R11 §5: one rule per line; replace qualitative language with a specific numeric threshold). Emails the site manager when an idle-vehicle threshold trips on the Step-18 Eventhouse property.",
+      "displayName": "Zava idle-vehicle email alert",
+      "monitor": {
+        "object": "Vehicle",
+        "attribute": "idle_minutes",
+        "dataSource": "ZavaTelematicsEventhouse"
+      },
+      "condition": {
+        "operator": "GreaterThan",
+        "threshold": 120
+      },
+      "action": {
+        "kind": "EmailMessage",
+        "messageLocale": "en-us",
+        "sentTo": ["__ZAVA_SITE_MANAGER_EMAIL__"],
+        "copyTo": [],
+        "bCCTo": [],
+        "subject": "Zava alert: idle-vehicle threshold tripped",
+        "headline": "A vehicle exceeded the idle-vehicle threshold (idle_minutes > 120).",
+        "optionalMessage": "Review the affected vehicle and rebalance the fleet at the site as needed.",
+        "additionalInformation": "Auto-generated by Fabric Activator from the Zava Eventhouse Telematics table (Teams-free). Affected vehicle_id / site_id and idle_minutes are included as rule context."
+      }
+    },
+    {
+      "name": "MaintenanceFaultEmailAlert",
+      "_comment": "DEFAULT rule #2 (Teams-free). A SINGLE condition: a populated diagnostic trouble code (overdue-maintenance / fault-spike proxy). Kept deterministic — one condition per rule (R11 §5; AND-combined conditions are unsupported).",
+      "displayName": "Zava maintenance-fault email alert",
+      "monitor": {
+        "object": "Vehicle",
+        "attribute": "fault_code",
+        "dataSource": "ZavaTelematicsEventhouse"
+      },
+      "condition": {
+        "operator": "IsNotEmpty"
+      },
+      "action": {
+        "kind": "EmailMessage",
+        "messageLocale": "en-us",
+        "sentTo": ["__ZAVA_SITE_MANAGER_EMAIL__"],
+        "copyTo": [],
+        "bCCTo": [],
+        "subject": "Zava alert: vehicle maintenance fault detected",
+        "headline": "A vehicle reported a diagnostic trouble code (overdue-maintenance / fault spike).",
+        "optionalMessage": "Schedule maintenance for the affected vehicle before its next rental.",
+        "additionalInformation": "Auto-generated by Fabric Activator from the Zava Eventhouse Telematics table (Teams-free). Affected vehicle_id / site_id and fault_code are included as rule context."
+      }
+    },
+    {
+      "name": "WriteWorkOrderOnFault",
+      "_optional_requires": "work_order_item_id",
+      "_comment": "OPTIONAL Teams-free Fabric-item action (R11 §6c/§9). Runs a Zava DataPipeline/Notebook that writes a work-order row, passing SiteId/VehicleId parameters. This rule is INCLUDED only when alerting.work_order_item_id is configured with a real Fabric item GUID; otherwise 78_create_activator_email.py drops it so the default deploy stays Email-only. itemId is a zero-GUID placeholder substituted from alerting.work_order_item_id.",
+      "displayName": "Zava work-order on maintenance fault",
+      "monitor": {
+        "object": "Vehicle",
+        "attribute": "fault_code",
+        "dataSource": "ZavaTelematicsEventhouse"
+      },
+      "condition": {
+        "operator": "IsNotEmpty"
+      },
+      "action": {
+        "kind": "FabricItemInvocation",
+        "workspaceId": "00000000-0000-0000-0000-000000000000",
+        "itemId": "00000000-0000-0000-0000-000000000000",
+        "parameters": {
+          "SiteId": "@site_id",
+          "VehicleId": "@vehicle_id"
+        }
+      }
+    }
+  ]
+}

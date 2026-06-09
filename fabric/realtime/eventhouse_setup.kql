@@ -1,0 +1,152 @@
+// =============================================================================
+// eventhouse_setup.kql — Zava Real-Time Intelligence KQL setup (plan Step 18)
+// -----------------------------------------------------------------------------
+// Run against the KQL database (`realtime.kql_database_name`, default `zava_rt`)
+// inside the Step-18 Eventhouse. Executed as a management script by
+// fabric/scripts/75_create_eventhouse.py via the Kusto management endpoint
+// ({queryServiceUri}/v1/rest/mgmt). Every command is idempotent
+// (.create-merge / .create-or-alter / .alter / .alter-merge), so the whole
+// script is safe to re-run.
+//
+// The table name is the placeholder token `__ZAVA_KQL_TABLE_NAME__` (default
+// `Telematics`). 75_create_eventhouse.py substitutes it from
+// realtime.kql_table_name before running this script, so the table created here,
+// the script's configured table name, and the Eventstream destination tableName
+// (fabric/realtime/eventstream_definition.json, same token) always match. To run
+// this file by hand in the KQL query editor, first replace every
+// `__ZAVA_KQL_TABLE_NAME__` with your table name (default `Telematics`).
+//
+// The table is intentionally a SINGLE FLAT table with descriptive column names
+// and column docstrings — this is the supported, recommended shape for a Fabric
+// Operations Agent / Activator monitored source (R11 §5: "Flatten Eventhouse
+// tables (no nested JSON), use descriptive column names, add column
+// descriptions, ensure the ingestion time column is populated").
+//
+// The schema matches the Step-3 telematics event emitted by
+// data/generate_telematics_stream.py 1:1 (event_id, vehicle_id, site_id, ts,
+// ignition_state, idle_minutes, odometer_miles, fault_code, latitude,
+// longitude, speed_mph, fuel_or_soc_pct, is_spike). The Eventstream JSON
+// ingestion mapping (TelematicsMapping) below binds each JSON property to its
+// column so the Step-18 Eventstream destination lands rows without a transform.
+//
+// Watch+act signals (Steps 19-20) are exposed as helper functions so the
+// Activator email rule and the Operations Agent can ground on a clear,
+// numeric-threshold, time-series condition:
+//   * idle-vehicle spike     -> idle_minutes > IDLE_ALERT_THRESHOLD_MIN (120)
+//   * maintenance-fault spike -> fault_code is non-empty
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// 1. Telematics table — flat schema, exact match to the Step-3 event.
+//    .create-merge is idempotent: creates the table if absent, and only adds
+//    missing columns on re-run (never drops/retypes existing columns).
+// -----------------------------------------------------------------------------
+.create-merge table __ZAVA_KQL_TABLE_NAME__ (
+    event_id: string,
+    vehicle_id: string,
+    site_id: string,
+    ts: datetime,
+    ignition_state: string,
+    idle_minutes: int,
+    odometer_miles: long,
+    fault_code: string,
+    latitude: real,
+    longitude: real,
+    speed_mph: int,
+    fuel_or_soc_pct: int,
+    is_spike: bool
+)
+
+// -----------------------------------------------------------------------------
+// 2. Column docstrings — required by R11 §5 so the Operations Agent / Activator
+//    understands each column's business meaning without guessing.
+// -----------------------------------------------------------------------------
+.alter-merge table __ZAVA_KQL_TABLE_NAME__ column-docstrings (
+    event_id: "Unique id for this telematics reading (one event per row).",
+    vehicle_id: "Business key of the vehicle (FK to Vehicles.vehicle_id). Identifies the monitored asset.",
+    site_id: "Home/nearest Zava rental site (FK to Sites.site_id). Used to route the site-manager alert.",
+    ts: "Event time of the reading (UTC). The time-series axis for spike-window queries.",
+    ignition_state: "Engine ignition: 'on' or 'off'.",
+    idle_minutes: "Minutes the vehicle has been idle. Idle-vehicle alert fires when idle_minutes > 120.",
+    odometer_miles: "Vehicle odometer reading in miles.",
+    fault_code: "OBD-II-like diagnostic trouble code (e.g. 'P0300'); empty when healthy. Non-empty => maintenance/fault alert.",
+    latitude: "Latitude of the vehicle's last known position (for multi-city maps).",
+    longitude: "Longitude of the vehicle's last known position (for multi-city maps).",
+    speed_mph: "Instantaneous speed in miles per hour (0 when idle/off).",
+    fuel_or_soc_pct: "Fuel level or EV state-of-charge as a percentage (0-100).",
+    is_spike: "True while the event falls inside the injected demo spike window (Step-3 --inject-spike). Diagnostic only."
+)
+
+// -----------------------------------------------------------------------------
+// 3. JSON ingestion mapping — binds Eventstream JSON properties to columns.
+//    Referenced by the Step-18 Eventstream Eventhouse destination so events
+//    land directly in the flat schema with no nested JSON. .create-or-alter is
+//    idempotent.
+// -----------------------------------------------------------------------------
+.create-or-alter table __ZAVA_KQL_TABLE_NAME__ ingestion json mapping "TelematicsMapping"
+```
+[
+    {"column": "event_id",        "Properties": {"path": "$.event_id"}},
+    {"column": "vehicle_id",      "Properties": {"path": "$.vehicle_id"}},
+    {"column": "site_id",         "Properties": {"path": "$.site_id"}},
+    {"column": "ts",              "Properties": {"path": "$.ts"}},
+    {"column": "ignition_state",  "Properties": {"path": "$.ignition_state"}},
+    {"column": "idle_minutes",    "Properties": {"path": "$.idle_minutes"}},
+    {"column": "odometer_miles",  "Properties": {"path": "$.odometer_miles"}},
+    {"column": "fault_code",      "Properties": {"path": "$.fault_code"}},
+    {"column": "latitude",        "Properties": {"path": "$.latitude"}},
+    {"column": "longitude",       "Properties": {"path": "$.longitude"}},
+    {"column": "speed_mph",       "Properties": {"path": "$.speed_mph"}},
+    {"column": "fuel_or_soc_pct", "Properties": {"path": "$.fuel_or_soc_pct"}},
+    {"column": "is_spike",        "Properties": {"path": "$.is_spike"}}
+]
+```
+
+// -----------------------------------------------------------------------------
+// 4. Retention/caching policy — keep the demo table small and queryable.
+//    7-day hot cache + 30-day retention is plenty for a live demo and keeps
+//    capacity cost low. .alter-merge only sets the named sub-properties.
+// -----------------------------------------------------------------------------
+.alter-merge table __ZAVA_KQL_TABLE_NAME__ policy retention softdelete = 30d
+.alter table __ZAVA_KQL_TABLE_NAME__ policy caching hot = 7d
+
+// -----------------------------------------------------------------------------
+// 5. Watch+act helper functions (Steps 19-20).
+//    Each encodes a SINGLE numeric-threshold condition (R11 §5: "one rule per
+//    line"; "replace qualitative language with a specific numeric threshold")
+//    and uses ingestion_time() so callers can detect newly-arrived rows
+//    (R11 §2: the agent defaults to ingestion time for new-record detection).
+// -----------------------------------------------------------------------------
+
+// Idle-vehicle alert: vehicles idle beyond the alert threshold (idle_minutes > 120).
+.create-or-alter function with (docstring = "Telematics rows breaching the idle-vehicle threshold (idle_minutes > 120). Source for the Step-19 Activator email / Step-20 Operations Agent idle rule.", folder = "ZavaWatchAndAct")
+    IdleVehicleAlerts() {
+        __ZAVA_KQL_TABLE_NAME__
+        | where idle_minutes > 120
+        | project vehicle_id, site_id, ts, idle_minutes, ignition_state, latitude, longitude, ingested_at = ingestion_time()
+    }
+
+// Maintenance-fault alert: any reading with a populated diagnostic trouble code.
+.create-or-alter function with (docstring = "Telematics rows with a populated OBD-II fault_code. Source for the Step-19 Activator email / Step-20 Operations Agent maintenance-fault rule.", folder = "ZavaWatchAndAct")
+    FaultCodeAlerts() {
+        __ZAVA_KQL_TABLE_NAME__
+        | where isnotempty(fault_code)
+        | project vehicle_id, site_id, ts, fault_code, odometer_miles, ingested_at = ingestion_time()
+    }
+
+// =============================================================================
+// Verification queries (run interactively — not part of the management script).
+// Replace __ZAVA_KQL_TABLE_NAME__ with the configured table name (default
+// `Telematics`) when pasting these into the KQL query editor.
+// -----------------------------------------------------------------------------
+// Row count after running the feed:
+//     __ZAVA_KQL_TABLE_NAME__ | count
+// Ingestion advancing across two runs (new-record detection, R11 §2):
+//     __ZAVA_KQL_TABLE_NAME__ | summarize latest_ingestion = max(ingestion_time())
+// Spike-window signal (confirms a monitorable time-series elevation for 19-20):
+//     let spike_start = datetime(2025-01-01T12:00:00Z);
+//     let spike_end   = datetime(2025-01-01T12:10:00Z);
+//     __ZAVA_KQL_TABLE_NAME__
+//     | where ts between (spike_start .. spike_end)
+//     | summarize avg_idle = avg(idle_minutes), faults = countif(isnotempty(fault_code))
+// =============================================================================

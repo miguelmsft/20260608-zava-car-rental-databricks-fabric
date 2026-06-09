@@ -1,0 +1,231 @@
+# =====================================================================================
+# Zava — Databricks Asset Bundle (Declarative Automation Bundle)
+# =====================================================================================
+# Packages the Unity Catalog medallion pipeline (raw -> bronze -> silver -> gold ->
+# certified asset) as code, with dev/prod targets (R8 §4). The certified GOLD tables are
+# standard managed Delta — the format mirrored into Microsoft Fabric (Variation 1).
+#
+# Layout note: this databricks.yml lives in `databricks/bundle/`, while the notebooks and
+# UC SQL live in sibling folders. `sync.paths` pulls those parent folders into the bundle
+# so the tasks below can reference them with `../notebooks/...` and `../uc/...`.
+#
+# Lifecycle (R8 §4.4):
+#   databricks bundle validate                      # static validation
+#   databricks bundle deploy            [-t prod]    # deploy jobs to a target
+#   databricks bundle run zava_uc_setup [-t prod]    # 1) create catalog/schemas + grants (run once)
+#   databricks bundle run zava_medallion_pipeline    # 2) 00 -> 10 -> 20 -> 30 (build gold)
+#   databricks bundle run zava_certify_gold          # 3) tag/comment/own the gold asset
+#
+# PREREQUISITE (manual / REST — see databricks/uc/01_metastore_external_access.sql):
+#   a metastore admin must enable "External data access" on the metastore for Fabric
+#   mirroring. Replace the principal placeholders in databricks/uc/03_grants_mirroring.sql
+#   and 04_certify_gold.sql before running zava_uc_setup / zava_certify_gold.
+#
+# Public repo: NO secrets. The host URLs are placeholders; auth is via `databricks auth`
+# (OAuth) / service principal / managed identity acquired at runtime.
+# =====================================================================================
+
+bundle:
+  name: zava-medallion-pipeline
+
+# Pull the sibling notebooks/, uc/ and the repo-root data/ folders into the bundle (they
+# live outside this bundle/ directory). Paths are relative to this databricks.yml.
+#   ../notebooks  -> deployed at ${workspace.file_path}/notebooks  (medallion notebooks)
+#   ../uc         -> deployed at ${workspace.file_path}/uc          (UC setup SQL)
+#   ../pipelines  -> deployed at ${workspace.file_path}/pipelines   (Lakeflow SDP — Step 9)
+#   ../../data    -> deployed at ${workspace.file_path}/data        (Step-3 synthetic data
+#                                                                    generator modules)
+# Syncing ../../data is REQUIRED so 00_generate_synthetic_data.py can import the Step-3
+# generator (generate_zava_data.py / generate_telematics_stream.py) at runtime; the task
+# is given the exact synced location via the `generator_path` base parameter below.
+sync:
+  paths:
+    - ../notebooks
+    - ../uc
+    - ../pipelines
+    - ../../data
+
+variables:
+  catalog:
+    description: "Unity Catalog catalog name (must match databricks_config.catalog, Step 1)."
+    default: "zava"
+  raw_schema:
+    description: "RAW medallion schema name (landed synthetic entities)."
+    default: "raw"
+  bronze_schema:
+    description: "BRONZE medallion schema name (auditable ingest copy)."
+    default: "bronze"
+  silver_schema:
+    description: "SILVER medallion schema name (cleaned/typed/conformed)."
+    default: "silver"
+  gold_schema:
+    description: "GOLD medallion schema name (certified, mirrored into Fabric)."
+    default: "gold"
+  curated_schema:
+    description: "CURATED schema for the Lakeflow SDP outputs (Variation-2 source; Step 9)."
+    default: "curated"
+  warehouse_id:
+    description: "SQL warehouse id used by the UC SQL setup/certify jobs. Set per environment."
+    default: ""
+  node_type_id:
+    description: "Job-cluster worker node type."
+    default: "Standard_DS3_v2"
+  spark_version:
+    description: "Databricks Runtime for job clusters (UC single-user, 13.3+ for tags)."
+    default: "15.4.x-scala2.12"
+
+# Reusable job-cluster spec (UC requires SINGLE_USER or USER_ISOLATION security mode).
+# Anchored here and merged into each notebook task.
+targets:
+  dev:
+    default: true
+    mode: development
+    workspace:
+      host: https://adb-<dev-workspace-id>.<n>.azuredatabricks.net
+    variables:
+      catalog: "zava_dev"
+
+  prod:
+    mode: production
+    workspace:
+      host: https://adb-<prod-workspace-id>.<n>.azuredatabricks.net
+    run_as:
+      service_principal_name: "<zava-data-engineering-sp-app-id>"
+    variables:
+      catalog: "zava"
+
+resources:
+  jobs:
+
+    # -------------------------------------------------------------------------------
+    # 1) One-time UC bootstrap: create catalog + medallion schemas, then mirroring grants.
+    #    SQL tasks run on a SQL warehouse (var.warehouse_id). 01 (metastore external data
+    #    access) is a manual/REST prerequisite documented in 01_metastore_external_access.sql.
+    # -------------------------------------------------------------------------------
+    zava_uc_setup:
+      name: "zava-uc-setup-${bundle.target}"
+      tasks:
+        - task_key: catalog_schema
+          sql_task:
+            warehouse_id: ${var.warehouse_id}
+            parameters:
+              catalog: ${var.catalog}
+              raw_schema: ${var.raw_schema}
+              bronze_schema: ${var.bronze_schema}
+              silver_schema: ${var.silver_schema}
+              gold_schema: ${var.gold_schema}
+            file:
+              path: ../uc/02_catalog_schema.sql
+        - task_key: grants_mirroring
+          depends_on:
+            - task_key: catalog_schema
+          sql_task:
+            warehouse_id: ${var.warehouse_id}
+            parameters:
+              catalog: ${var.catalog}
+              raw_schema: ${var.raw_schema}
+              bronze_schema: ${var.bronze_schema}
+              silver_schema: ${var.silver_schema}
+              gold_schema: ${var.gold_schema}
+            file:
+              path: ../uc/03_grants_mirroring.sql
+
+    # -------------------------------------------------------------------------------
+    # 2) Medallion pipeline: raw -> bronze -> silver -> gold (notebook tasks, job cluster).
+    #    This is the job whose run produces zava.gold.* (count > 0) for verification.
+    # -------------------------------------------------------------------------------
+    zava_medallion_pipeline:
+      name: "zava-medallion-pipeline-${bundle.target}"
+      job_clusters:
+        - job_cluster_key: medallion_cluster
+          new_cluster:
+            spark_version: ${var.spark_version}
+            node_type_id: ${var.node_type_id}
+            num_workers: 1
+            data_security_mode: SINGLE_USER
+      tasks:
+        - task_key: generate_raw
+          job_cluster_key: medallion_cluster
+          notebook_task:
+            notebook_path: ../notebooks/00_generate_synthetic_data.py
+            base_parameters:
+              catalog: ${var.catalog}
+              raw_schema: ${var.raw_schema}
+              # Exact deployed location of the synced repo data/ dir (see sync.paths above),
+              # so the notebook imports the Step-3 generator without fragile auto-detect.
+              generator_path: ${workspace.file_path}/data
+        - task_key: bronze
+          depends_on:
+            - task_key: generate_raw
+          job_cluster_key: medallion_cluster
+          notebook_task:
+            notebook_path: ../notebooks/10_bronze.py
+            base_parameters:
+              catalog: ${var.catalog}
+              raw_schema: ${var.raw_schema}
+              bronze_schema: ${var.bronze_schema}
+        - task_key: silver
+          depends_on:
+            - task_key: bronze
+          job_cluster_key: medallion_cluster
+          notebook_task:
+            notebook_path: ../notebooks/20_silver.py
+            base_parameters:
+              catalog: ${var.catalog}
+              bronze_schema: ${var.bronze_schema}
+              silver_schema: ${var.silver_schema}
+        - task_key: gold
+          depends_on:
+            - task_key: silver
+          job_cluster_key: medallion_cluster
+          notebook_task:
+            notebook_path: ../notebooks/30_gold.py
+            base_parameters:
+              catalog: ${var.catalog}
+              silver_schema: ${var.silver_schema}
+              gold_schema: ${var.gold_schema}
+
+    # -------------------------------------------------------------------------------
+    # 3) Certify the gold asset (tags + comments + ownership + mirrorable registry table).
+    #    Run AFTER zava_medallion_pipeline. SQL task on a warehouse.
+    # -------------------------------------------------------------------------------
+    zava_certify_gold:
+      name: "zava-certify-gold-${bundle.target}"
+      tasks:
+        - task_key: certify_gold
+          sql_task:
+            warehouse_id: ${var.warehouse_id}
+            parameters:
+              catalog: ${var.catalog}
+              gold_schema: ${var.gold_schema}
+            file:
+              path: ../uc/04_certify_gold.sql
+
+  # ---------------------------------------------------------------------------------
+  # Lakeflow Spark Declarative Pipeline (Step 9) — Variation-2 SOURCE.
+  # Produces curated UC MANAGED outputs (materialized view + streaming table) from the
+  # silver layer. These are NOT mirrorable (streaming tables / materialized views are
+  # excluded from Fabric mirroring — R10 §2.3); Variation 2 instead shortcuts their
+  # managed ADLS storage (see docs/runbook-end-to-end.md for path discovery), or uses the
+  # external-sink alternative in ../pipelines/lakeflow_sink_external.py (sub-pattern 2B).
+  #
+  # Target catalog/schema are set here (catalog = ${var.catalog}, schema = curated). The
+  # source catalog / silver schema are passed to the pipeline code via `configuration`
+  # (Spark conf) so there are no hardcoded names. Serverless compute keeps the demo simple.
+  # ---------------------------------------------------------------------------------
+  pipelines:
+    zava_lakeflow_curated:
+      name: "zava-lakeflow-curated-${bundle.target}"
+      catalog: ${var.catalog}
+      schema: ${var.curated_schema}
+      serverless: true
+      channel: CURRENT
+      photon: true
+      libraries:
+        - file:
+            path: ../pipelines/lakeflow_sdp.py
+      configuration:
+        zava.source_catalog: ${var.catalog}
+        zava.silver_schema: ${var.silver_schema}
+        zava.curated_catalog: ${var.catalog}
+        zava.curated_schema: ${var.curated_schema}

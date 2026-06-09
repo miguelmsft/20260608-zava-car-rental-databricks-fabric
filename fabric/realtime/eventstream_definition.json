@@ -1,0 +1,50 @@
+{
+  "_comment": "Zava telematics Eventstream item definition (plan Step 18). This is the 'eventstream.json' topology part for the Fabric Eventstream item created by fabric/scripts/75_create_eventhouse.py. It ingests the synthetic telematics feed produced by data/generate_telematics_stream.py into the Step-18 Eventhouse KQL 'Telematics' table. The __ZAVA_* placeholder tokens (and the all-zero GUIDs) are substituted at deploy time by 75_create_eventhouse.py from deploy_config + the ids of the freshly created workspace/Eventhouse/KQL database. NO secrets: the CustomEndpoint source's connection string is created once in the UI and is never committed (see docs/manual-steps.md, Step 18).",
+  "sources": [
+    {
+      "name": "TelematicsCustomApp",
+      "type": "CustomEndpoint",
+      "properties": {},
+      "_comment": "Custom App / custom-endpoint source. After the Eventstream is created, copy its event-hub-compatible connection string (UI: Eventstream -> source -> Keys) and point a small pusher / data/generate_telematics_stream.py replayer at it. The connection string is a runtime secret and is never stored in this repo."
+    }
+  ],
+  "destinations": [
+    {
+      "name": "TelematicsEventhouse",
+      "type": "Eventhouse",
+      "properties": {
+        "dataIngestionMode": "ProcessedIngestion",
+        "workspaceId": "00000000-0000-0000-0000-000000000000",
+        "itemId": "00000000-0000-0000-0000-000000000000",
+        "databaseName": "__ZAVA_KQL_DATABASE_NAME__",
+        "tableName": "__ZAVA_KQL_TABLE_NAME__",
+        "inputSerialization": {
+          "type": "Json",
+          "properties": {
+            "encoding": "UTF8"
+          }
+        }
+      },
+      "inputNodes": [
+        {
+          "name": "TelematicsStream"
+        }
+      ],
+      "_comment": "Eventhouse destination -> KQL Telematics table. workspaceId/itemId are placeholder GUIDs that 75_create_eventhouse.py replaces with the real workspace id and the KQL database item id; databaseName/tableName tokens are replaced from realtime.kql_database_name / realtime.kql_table_name. Lands rows via the TelematicsMapping JSON ingestion mapping defined in eventhouse_setup.kql."
+    }
+  ],
+  "streams": [
+    {
+      "name": "TelematicsStream",
+      "type": "DefaultStream",
+      "properties": {},
+      "inputNodes": [
+        {
+          "name": "TelematicsCustomApp"
+        }
+      ]
+    }
+  ],
+  "operators": [],
+  "compatibilityLevel": "1.0"
+}

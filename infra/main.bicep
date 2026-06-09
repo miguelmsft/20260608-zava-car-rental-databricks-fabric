@@ -90,6 +90,34 @@ param managedStorageAccountName string = '${resourcePrefix}uc'
 @description('Container name for the Unity Catalog metastore/catalog root.')
 param ucContainerName string = 'unitycatalog'
 
+// ---- ADLS network hardening (Step 7 authored; APPLIED in Step 12) ----------
+// AUTHORING + conditional wire-in only. The firewall lockdown + trusted-workspace
+// resource instance rule are actually APPLIED in Step 12, AFTER Step 10 creates
+// the Fabric Workspace Identity. Default OFF so the standard deploy is unchanged.
+@description('When true, FORCE-apply the ADLS network-hardening module (firewall default-deny + Fabric trusted-workspace rule). Default FALSE. NOTE (Step 12): supplying a real Fabric Workspace GUID (fabricWorkspaceId) or full workspace resourceId (fabricWorkspaceResourceId) ALSO auto-enables hardening for the Variation-2 path — see applyNetworkHardeningEffective below (plan §Step 7 scope note / §Step 12).')
+param applyNetworkHardening bool = false
+
+@description('Entra tenant id owning the trusted Fabric workspace (for the resource instance rule). When empty, defaults to the deployment tenant tenant().tenantId (R10 §6.2 — the tenant that owns the Fabric workspace). Override only for cross-tenant scenarios. Supplied/derived in Step 12.')
+param fabricTenantId string = ''
+
+@description('GUID of the trusted Fabric workspace created in Step 10 (NOT the capacity). When set, the R10 trusted-workspace resourceId is CONSTRUCTED with the fixed Fabric subscriptionId 00000000-0000-0000-0000-000000000000 — see fabricWorkspaceResourceIdEffective. Supplied in Step 12 from the Step-10 workspace output. Leave empty in the authoring phase.')
+param fabricWorkspaceId string = ''
+
+@description('Full ARM resourceId of the trusted Fabric workspace (subscriptionId MUST be 00000000-0000-0000-0000-000000000000). OPTIONAL escape hatch — prefer fabricWorkspaceId (just the GUID) so the resourceId is built per R10 §6.2 and cannot be mis-typed. When both are set this full value wins. Supplied in Step 12 (R10 §6.2).')
+param fabricWorkspaceResourceId string = ''
+
+@description('Object (principal) id of the Fabric Workspace Identity (created in Step 10). Granted Storage Blob Data Reader during Step 12 hardening (R10 §6.3).')
+param workspaceIdentityObjectId string = ''
+
+@description('Operator OVERRIDE to FORCE publicNetworkAccess = Disabled during hardening. Default FALSE. NOTE (Step 12): even when FALSE, the hardening-applied path now AUTOMATICALLY locks down public network access once the trusted-workspace rule exists — Disabled when no break-glass IP/VNet rules are supplied, or "selected networks" (Enabled + defaultAction=Deny) when they are. See disableStoragePublicNetworkAccessEffective. Set TRUE to force Disabled even with break-glass rules present.')
+param disableStoragePublicNetworkAccess bool = false
+
+@description('Optional public IPv4 addresses / CIDR ranges to allow through the storage firewall (break-glass).')
+param allowedStorageIpRules array = []
+
+@description('Optional subnet resource IDs to allow through the storage firewall.')
+param allowedStorageSubnetResourceIds array = []
+
 // ---- Key Vault -------------------------------------------------------------
 @description('Name of the Key Vault for demo secrets (RBAC-enabled; no secrets in template).')
 param keyVaultName string = '${resourcePrefix}-kv'
@@ -100,6 +128,60 @@ var commonTags = {
   environment: 'demo'
   managedBy: 'bicep'
 }
+
+// ---- Step 12 — trusted-workspace resource-instance-rule derivation (R10 §6.2) ----
+// R10 §6.2 (verbatim mechanism): the Fabric workspace resourceId for a storage
+// resource instance rule MUST use the FIXED subscriptionId
+// 00000000-0000-0000-0000-000000000000 and the literal resourcegroups/Fabric path:
+//   /subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/Fabric/
+//     providers/Microsoft.Fabric/workspaces/<workspace-guid>
+// We CONSTRUCT it from the Step-10 workspace GUID (fabricWorkspaceId) rather than
+// inventing/hand-typing a resourceId. A full fabricWorkspaceResourceId override
+// still wins for cross-tenant / non-standard cases.
+var fabricTrustedSubscriptionId = '00000000-0000-0000-0000-000000000000'
+
+var fabricWorkspaceResourceIdFromGuid = empty(fabricWorkspaceId)
+  ? ''
+  : '/subscriptions/${fabricTrustedSubscriptionId}/resourcegroups/Fabric/providers/Microsoft.Fabric/workspaces/${fabricWorkspaceId}'
+
+// Effective Fabric workspace resourceId fed to the hardening module: the explicit
+// full id when supplied, else built from the Step-10 workspace GUID per R10 §6.2.
+var fabricWorkspaceResourceIdEffective = !empty(fabricWorkspaceResourceId)
+  ? fabricWorkspaceResourceId
+  : fabricWorkspaceResourceIdFromGuid
+
+// Tenant id is AVAILABLE in the Bicep — default to the deployment tenant (the tenant
+// that owns the Fabric workspace) rather than requiring a hand-entered value (R10 §6.2).
+var fabricTenantIdEffective = empty(fabricTenantId) ? tenant().tenantId : fabricTenantId
+
+// "Flip the gate on for the Variation-2 path" (plan §Step 12): hardening applies when
+// EITHER the explicit applyNetworkHardening flag is set OR a real Step-10 Fabric
+// Workspace Identity (GUID or full resourceId) is supplied. The standard deploy
+// (no identity supplied, flag false) stays a no-op — main.bicep is unchanged for it.
+var applyNetworkHardeningEffective = (applyNetworkHardening || !empty(fabricWorkspaceResourceIdEffective)) && !useExistingDatabricks
+
+// ---- Step 12 — public-network-access lockdown derivation (R10 §6.3) ----------
+// The firewall only switches to defaultAction = Deny once a real trusted-workspace
+// resource instance rule is supplied (the module's no-op-until-identity-exists gate
+// keys off the SAME fabricWorkspaceResourceIdEffective). To make the hardening a
+// GENUINE lockdown — not a Deny firewall sitting behind publicNetworkAccess=Enabled
+// with no resource rule — we must disable/restrict public network access on exactly
+// that condition, never before (a fresh deploy with no Fabric identity must not be
+// locked out). plan §Step 12 / R10 §6.3.
+var trustedWorkspaceRuleSupplied = !empty(fabricWorkspaceResourceIdEffective)
+
+// Break-glass IP / VNet allow rules require "selected networks" mode: publicNetworkAccess
+// stays Enabled while defaultAction = Deny, otherwise the IP/subnet allow rules are
+// ignored (publicNetworkAccess = Disabled blocks ALL public traffic, including allowed
+// IPs). With NO break-glass rules we fully Disable public network access. An explicit
+// disableStoragePublicNetworkAccess=true forces Disabled regardless (operator override).
+var hasBreakGlassNetworkRules = !empty(allowedStorageIpRules) || !empty(allowedStorageSubnetResourceIds)
+
+// Effective lockdown: only ever true once the trusted-workspace rule exists (so the
+// firewall is simultaneously defaulting to Deny and the trusted rule is the access path).
+// Within the hardening-applied path: Disabled by default, or selected-networks (Enabled +
+// Deny) when break-glass rules are present, unless the operator explicitly forces Disabled.
+var disableStoragePublicNetworkAccessEffective = applyNetworkHardeningEffective && trustedWorkspaceRuleSupplied && (disableStoragePublicNetworkAccess || !hasBreakGlassNetworkRules)
 
 // ============================================================================
 // Databricks data foundation (skipped entirely when useExistingDatabricks=true)
@@ -154,6 +236,33 @@ module fabricCapacity './modules/fabric-capacity.bicep' = if (!useExistingFabric
 }
 
 // ============================================================================
+// ADLS network hardening — AUTHORED in Step 7, APPLIED in Step 12.
+// Step 12 flips the gate on for the Variation-2 path: the module is instantiated
+// when applyNetworkHardeningEffective is true (explicit flag OR a real Step-10
+// Fabric Workspace Identity supplied), passing the R10 §6.2 resource-instance rule
+// (constructed workspace resourceId + deployment tenant id). The standard deploy
+// (no identity, flag false) leaves the account untouched. dependsOn ensures the
+// firewall layers AFTER the base account from storage-adls.bicep.
+// ============================================================================
+module networkHardening './modules/network-hardening.bicep' = if (applyNetworkHardeningEffective) {
+  name: 'deploy-network-hardening'
+  params: {
+    storageAccountName: managedStorageAccountName
+    location: location
+    fabricTenantId: fabricTenantIdEffective
+    fabricWorkspaceResourceId: fabricWorkspaceResourceIdEffective
+    workspaceIdentityObjectId: workspaceIdentityObjectId
+    disablePublicNetworkAccess: disableStoragePublicNetworkAccessEffective
+    allowedIpRules: allowedStorageIpRules
+    allowedSubnetResourceIds: allowedStorageSubnetResourceIds
+    tags: commonTags
+  }
+  dependsOn: [
+    storageAdls
+  ]
+}
+
+// ============================================================================
 // Key Vault — demo secrets vault (always deployed; not a Databricks resource).
 // ============================================================================
 module keyVault './modules/keyvault.bicep' = {
@@ -203,3 +312,10 @@ output fabricCapacityId string = useExistingFabricCapacity ? existingFabricCapac
 
 @description('Name of the Fabric capacity. Fresh: module output; existing: the configured capacity name placeholder.')
 output fabricCapacityName string = useExistingFabricCapacity ? fabricCapacityName : fabricCapacity.outputs.capacityName
+
+// ---- Network hardening outputs (Step 7 authored; meaningful after Step 12) ----
+@description('True when the ADLS network hardening + trusted-workspace rule were applied (Step 12). False while hardening is off or the trusted-workspace params are placeholders.')
+output networkHardeningApplied bool = applyNetworkHardeningEffective ? networkHardening.outputs.trustedWorkspaceAccessApplied : false
+
+@description('Effective storage firewall default action after hardening (Deny once locked down in Step 12, otherwise the account default).')
+output storageNetworkDefaultAction string = applyNetworkHardeningEffective ? networkHardening.outputs.networkDefaultAction : 'Allow'

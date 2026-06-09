@@ -97,3 +97,16 @@ Every row uses these columns:
      Do NOT pre-fill these here in Step 2 — each owning step adds its own rows. -->
 
 *End of seeded prerequisite rows. Later steps append below.*
+
+### D. Fabric workspace + Workspace Identity (Step 10)
+
+> Step 10 (`fabric/scripts/00_create_workspace.py`) automates workspace create/attach, F64
+> capacity assignment, and Workspace Identity provisioning via the Fabric REST API
+> (`POST /v1/workspaces/{id}/provisionIdentity`). The rows below are the residual UI/consent
+> actions that the REST path **may** require depending on the tenant (R7/R10).
+
+| Step | Action | Where (portal path) | Why | Who/role |
+|---|---|---|---|---|
+| 10 | Create the **Fabric Workspace Identity** *if the REST `provisionIdentity` call is unsupported for the SP in your tenant* | Fabric workspace → **Workspace settings** → **Workspace identity** → **+ Workspace identity** | Workspace Identity REST provisioning can require one-time tenant/admin consent and is **not always service-principal-supported** (R7/R10). The script falls back to this UI step and logs it | Fabric Admin |
+| 10 | Capture the Workspace Identity **object id** into `workspace.identity_object_id` in `deploy_config.json` | Fabric workspace → **Workspace settings** → **Workspace identity** (copy the identity's object id) | The object id does not exist until the identity is created; Step 12 binds the ADLS resource-instance / trusted-workspace rule to it (R10) | Fabric Admin |
+

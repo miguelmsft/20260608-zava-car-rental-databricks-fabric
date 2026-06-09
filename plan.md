@@ -441,8 +441,8 @@ Each step lists **Status**, **Files**, **Depends on**, **Tasks**, **Verification
 
 **Implementation Notes (2026-06-08):** Authored 4 modules (`access-connector.bicep`, `databricks-workspace.bicep`, `storage-adls.bicep`, `keyvault.bicep`) + `infra/main.bicep` wiring. Resource shapes follow R8 §2.3–2.6: workspace `Microsoft.Databricks/workspaces@2024-05-01` (Premium SKU, `accessConnector` MI attach, `defaultCatalog.initialType=UnityCatalog`); access connector `@2024-05-01` system-assigned MI; ADLS `Microsoft.Storage/storageAccounts@2023-05-01` `StorageV2`+`isHnsEnabled=true` with Storage Blob Data Contributor role assignment (`ba92f5b4-…`) scoped to the storage account; Key Vault `@2023-07-01` RBAC-enabled, no secrets. `main.bicep` gates Databricks resources behind `!useExistingDatabricks` and emits pass-through outputs on the existing path (workspace url/id, access connector id, storage name, KV uri). Params are consistent with Step 1 `databricks_config` (sku=premium, managed_storage_account=zavauc, access_connector) and the `dev`/`existing-resources` bicepparam files. **Verification:** `az bicep build` (CLI 0.43.8) exits 0 with 0 errors for all 5 files; `az bicep build-params` validates both `.bicepparam` files against `main.bicep` (0 errors). Remaining lint warnings are intentional `no-unused-params` for the Fabric-capacity params (Step 5 wires them; declared here so the shared param files validate). `what-if` items left unchecked — Phase 0 is author-only (no deploy); what-if requires `az login` + a target RG, deferred. Local implementation and verification complete; awaiting reviewer verdict.
 
-#### Step 7: Bicep — author ADLS network-hardening module (Variation 2) — ⬜ Not started
-**Status:** ⬜ Not started
+#### Step 7: Bicep — author ADLS network-hardening module (Variation 2) — ✅ Done
+**Status:** ✅ Done
 **Files:** `infra/modules/network-hardening.bicep`, `infra/main.bicep` (conditional wire-in, NOT applied here), `docs/manual-steps.md` (append)
 **Depends on:** Step 6
 
@@ -462,8 +462,8 @@ Each step lists **Status**, **Files**, **Depends on**, **Tasks**, **Verification
 
 ### Phase 2 — Databricks Data Foundation
 
-#### Step 8: Unity Catalog setup, grants, medallion notebooks, certified gold (Variation 1 source) — 🔄 In progress
-**Status:** 🔄 In progress
+#### Step 8: Unity Catalog setup, grants, medallion notebooks, certified gold (Variation 1 source) — ✅ Done
+**Status:** ✅ Done
 **Files:** `databricks/uc/01_metastore_external_access.sql`, `databricks/uc/02_catalog_schema.sql`, `databricks/uc/03_grants_mirroring.sql`, `databricks/uc/04_certify_gold.sql`, `databricks/notebooks/00_generate_synthetic_data.py`, `databricks/notebooks/10_bronze.py`, `databricks/notebooks/20_silver.py`, `databricks/notebooks/30_gold.py`, `databricks/bundle/databricks.yml`
 **Depends on:** Step 3, Step 6
 
@@ -483,8 +483,8 @@ Each step lists **Status**, **Files**, **Depends on**, **Tasks**, **Verification
 
 **Manual steps:** Enabling external data access at the **metastore** level may require account-admin confirmation in the Databricks account console (documented).
 
-#### Step 9: Lakeflow Spark Declarative Pipeline (Variation 2 source) + managed-storage path discovery — ⬜ Not started
-**Status:** ⬜ Not started
+#### Step 9: Lakeflow Spark Declarative Pipeline (Variation 2 source) + managed-storage path discovery — ✅ Done
+**Status:** ✅ Done
 **Files:** `databricks/pipelines/lakeflow_sdp.py`, `databricks/pipelines/lakeflow_sink_external.py`, `databricks/uc/05_access_policies.sql`, `databricks/bundle/databricks.yml` (add pipeline), `docs/runbook-end-to-end.md` (append discovery snippet)
 **Depends on:** Step 8
 
@@ -504,8 +504,8 @@ Each step lists **Status**, **Files**, **Depends on**, **Tasks**, **Verification
 
 ### Phase 3 — Fabric Ingestion (both variations)
 
-#### Step 10: Create/attach Fabric workspace + assign capacity + Workspace Identity — ⬜ Not started
-**Status:** ⬜ Not started
+#### Step 10: Create/attach Fabric workspace + assign capacity + Workspace Identity — ✅ Done
+**Status:** ✅ Done
 **Files:** `fabric/scripts/00_create_workspace.py`, `fabric/config/deploy_config.sample.json` (extend), `docs/manual-steps.md` (append)
 **Depends on:** Step 5, Step 2 (tenant settings)
 
@@ -521,8 +521,8 @@ Each step lists **Status**, **Files**, **Depends on**, **Tasks**, **Verification
 
 **Manual steps:** **Workspace Identity creation** (Workspace settings → Workspace identity) is UI-assisted (R10) — appended to appendix.
 
-#### Step 11: Variation 1 — Mirrored Azure Databricks Catalog — ⬜ Not started
-**Status:** ⬜ Not started
+#### Step 11: Variation 1 — Mirrored Azure Databricks Catalog — ✅ Done
+**Status:** ✅ Done
 **Files:** `fabric/scripts/10_create_mirrored_catalog.py`, `docs/manual-steps.md` (append)
 **Depends on:** Step 8, Step 10
 
@@ -538,8 +538,8 @@ Each step lists **Status**, **Files**, **Depends on**, **Tasks**, **Verification
 
 **Manual steps:** **Databricks connection OAuth consent** is a one-time UI step (R1); mirrored-catalog create requires **user-token** (no SP — R7). Appended to appendix.
 
-#### Step 12: Variation 2 — secured OneLake shortcut + APPLY ADLS network hardening — ⬜ Not started
-**Status:** ⬜ Not started
+#### Step 12: Variation 2 — secured OneLake shortcut + APPLY ADLS network hardening — ✅ Done
+**Status:** ✅ Done
 **Files:** `fabric/scripts/20_create_shortcut.py`, `infra/main.bicep` (apply hardening with real Workspace Identity), `docs/manual-steps.md` (append)
 **Depends on:** Step 9, Step 10, Step 7
 
@@ -652,8 +652,8 @@ Each step lists **Status**, **Files**, **Depends on**, **Tasks**, **Verification
 
 **Manual steps:** **Ontology data-source attach** to the Data Agent may be a UI step in some tenants (R4). Core create/update is via **Data Agent REST API** (R3); `fabric-cicd`/Git is the secondary ALM path. Appended to appendix only if the ontology attach is needed.
 
-#### Step 18: Real-Time Intelligence — Eventhouse + KQL DB/table + Eventstream (Activator + Operations Agent source) — ⬜ Not started
-**Status:** ⬜ Not started
+#### Step 18: Real-Time Intelligence — Eventhouse + KQL DB/table + Eventstream (Activator + Operations Agent source) — ✅ Done
+**Status:** ✅ Done
 **Files:** `fabric/scripts/75_create_eventhouse.py`, `fabric/realtime/eventhouse_setup.kql`, `fabric/realtime/eventstream_definition.json`, `docs/manual-steps.md` (append)
 **Depends on:** Step 10
 **Provisioning flag:** runs only when `features.enable_eventhouse=true` (required when `enable_activator_email=true` or `enable_operations_agent=true`).
@@ -674,8 +674,8 @@ Each step lists **Status**, **Files**, **Depends on**, **Tasks**, **Verification
 
 **Manual steps:** **Eventstream source connection / Custom App credential** wiring may be UI-assisted (connection creation). Appended to appendix.
 
-#### Step 19: Fabric Activator (Reflex) native Email alert — DEFAULT, Teams-free watch + act — ⬜ Not started
-**Status:** ⬜ Not started
+#### Step 19: Fabric Activator (Reflex) native Email alert — DEFAULT, Teams-free watch + act — ✅ Done
+**Status:** ✅ Done
 **Files:** `fabric/scripts/78_create_activator_email.py`, `fabric/activator/reflex_entities.json`, `docs/manual-steps.md` (append)
 **Depends on:** Step 18 (Eventhouse/KQL source). **Optional/conditional:** Step 16 (Ontology business entities) only when `enable_ontology=true` — used for richer ontology-entity binding. The default email rule binds to the Step 18 Eventhouse property and does **NOT** require Ontology (this preserves the GA-only fallback: Activator email keeps working even if the only preview item, Ontology, is unavailable).
 **Provisioning flag:** runs only when `features.enable_activator_email=true` (default `true`; requires `enable_eventhouse=true`).
@@ -697,8 +697,8 @@ Each step lists **Status**, **Files**, **Depends on**, **Tasks**, **Verification
 
 **Manual steps:** Authoring/validating the Activator rule in **design mode** is UI-assisted, though the Reflex item + `EmailMessage` definition deploy as code (R11 §6c). No Teams required. Appended to appendix.
 
-#### Step 20: Operations Agent (GA) — OPTIONAL Teams enhancement (LLM-reasoned watch + act) — ⬜ Not started
-**Status:** ⬜ Not started
+#### Step 20: Operations Agent (GA) — OPTIONAL Teams enhancement (LLM-reasoned watch + act) — ✅ Done
+**Status:** ✅ Done
 **Files:** `fabric/scripts/80_create_operations_agent.py`, `fabric/operations-agent/Configurations.json`, `docs/manual-steps.md` (append)
 **Depends on:** Step 18 (Eventhouse/KQL source). **Optional/conditional:** Step 16 (Ontology) only when `enable_ontology=true` (richer enrichment). (Step 20 itself is optional — runs only when `enable_operations_agent=true`.)
 **Provisioning flag:** runs only when `features.enable_operations_agent=true` (region ∈ {eastus2, westus} **and** a Microsoft Teams account is available). Default `false`.

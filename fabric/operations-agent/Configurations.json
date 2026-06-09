@@ -1,0 +1,40 @@
+{
+  "_comment": "Zava Operations Agent item definition (plan Step 20; R11). This is the 'Configurations.json' OperationsAgentDefinition part for the Fabric Operations Agent item created by fabric/scripts/80_create_operations_agent.py. The Operations Agent reached GA at Microsoft Build 2026 (Azure blog 2026-06-02). It is the OPTIONAL Teams enhancement layered on top of the DEFAULT, Teams-free Activator email (plan Step 19): it adds LLM-reasoned, concept-aware recommendations with a human-in-the-loop Teams Yes/No approval card. It grounds on the SAME Step-18 Eventhouse/KQL 'Telematics' time-series source as a KustoDatabase data source (R11 §2). The __ZAVA_* placeholder tokens (and the all-zero GUIDs) are substituted at deploy time by 80_create_operations_agent.py from deploy_config + the ids of the workspace / KQL database / optional rebalancing pipeline resolved at runtime. NO secrets: the Recipient UPN is a placeholder address (alerting.site_manager_email) and is never a real, committed mailbox.",
+  "_comment_schema": "Per the Operations agent definition schema article (R11 §4b), the part path is 'Configurations.json' and 'format' is 'OperationsAgentV1'. As of June 2026 the GA schema deprecated 'Configuration.goals' (fold goals into 'instructions') and 'Configuration.recipient' (replaced by 'messageDestination'). This definition uses neither deprecated property. The auto-generated Create/Update REST examples still show the part path 'OperationsAgentV1.json'; the definition schema article ('Configurations.json') is treated as authoritative here — confirm the accepted part path against your tenant before relying on the scripted deploy (R11 §4b, §10).",
+  "configuration": {
+    "instructions": "*** Operational Instructions ***\n1. Alert me when a vehicle has \"idle_minutes\" greater than 120.\n2. Alert me when a vehicle has a non-empty \"fault_code\".\n3. Alert me when a vehicle's \"odometer_miles\" is greater than 75000 (service / maintenance overdue).\n\n*** Semantic Instructions ***\n1. Telematics readings for the Zava rental fleet are in the \"Telematics\" table, each row identified by the \"vehicle_id\" column.\n2. A vehicle belongs to a Zava rental site, identified by the \"site_id\" column; use it to route the recommendation to that site's manager.\n3. \"idle_minutes\" is the number of minutes a vehicle has been idle; greater than 120 indicates an idle-vehicle spike that may warrant rebalancing.\n4. \"fault_code\" is an OBD-II-like diagnostic trouble code (for example \"P0300\"); it is empty when the vehicle is healthy and non-empty when maintenance is required.\n5. \"odometer_miles\" is the vehicle odometer reading in miles; greater than 75000 indicates the vehicle is due for scheduled maintenance.\n6. \"ts\" is the UTC event time of the reading and is the time-series axis; the agent defaults to the table's ingestion time to detect new records and compute change over time.",
+    "_comment_instructions": "R11 §5 best practices: each rule is a SINGLE condition on its own line (AND-combined conditions are unsupported), thresholds are NUMERIC (not 'high'/'low'), rules are ordered by priority, and column names that contain underscores are quoted. The three Zava rules map to the Step-18 Telematics signals: idle-vehicle spike (idle_minutes > 120), maintenance-fault spike (non-empty fault_code), and maintenance-overdue (odometer_miles > 75000).",
+    "dataSources": {
+      "zavaTelematics": {
+        "id": "__ZAVA_KQL_DATABASE_ID__",
+        "type": "KustoDatabase",
+        "workspaceId": "__ZAVA_WORKSPACE_ID__",
+        "_comment": "KustoDatabase data source = the Step-18 Eventhouse KQL database (realtime.kql_database_name) containing the flat 'Telematics' table. 'type' is 'KustoDatabase' (the supported time-series path; the other allowed enum is 'Ontology'). 'id' and 'workspaceId' are substituted at deploy time by 80_create_operations_agent.py (the resolved KQL database item id and the target workspace id). Per R11, these may alternatively be Fabric variable-library references of the form $(/<WorkspaceName>/<LibraryName>/<VariableName>) for portable IDs across dev/test/prod."
+      }
+    },
+    "actions": {
+      "runRebalancingPipeline": {
+        "id": "__ZAVA_ACTION_ID__",
+        "kind": "FabricJobAction",
+        "displayName": "Run Zava rebalancing / maintenance pipeline",
+        "description": "Run the Fabric data pipeline that writes a rebalancing or maintenance work-order row for the affected site_id / vehicle_id.",
+        "connection": {
+          "jobArtifactId": "__ZAVA_PIPELINE_ITEM_ID__",
+          "jobWorkspaceId": "__ZAVA_WORKSPACE_ID__",
+          "itemType": "DataPipeline",
+          "jobType": "Pipeline"
+        },
+        "_comment": "FabricJobAction -> runs a Fabric DataPipeline as the recommended action (R11 §4b). 'jobArtifactId' is the target pipeline item id and 'id' the action's own GUID; both are substituted at deploy time by 80_create_operations_agent.py. This action is OPTIONAL: if no rebalancing pipeline is resolved at deploy time the script removes this action (the agent can still send a Teams recommendation with no defined action, per R11 §4a)."
+      }
+    },
+    "messageDestination": {
+      "kind": "Recipient",
+      "recipient": "__ZAVA_SITE_MANAGER_UPN__",
+      "_comment": "messageDestination replaces the deprecated 'recipient' root property (June 2026 GA schema change). kind 'Recipient' delivers a Teams 1:1 message + Yes/No approval card to this UPN (the site manager). REQUIRES Microsoft Teams + the Fabric Operations Agent Teams app (a manual UI step — see plan Step 20 / docs/manual-steps.md Step 25). For a 'TeamsChannel' destination (kind 'TeamsChannel' with teamId/channelId) the schema also requires configuration.identity.sponsor (a user UPN). For the Teams-FREE default, use the Step-19 Activator email path instead."
+    }
+  },
+  "playbook": {},
+  "_comment_playbook": "Provide an empty object until the extended playbook schema is published (R11 §4b). Saving the agent compiles the instructions into the runtime playbook.",
+  "shouldRun": true,
+  "_comment_shouldRun": "Run-state, automatable via the definition (R11 §4b/§8). 'true' starts monitoring; deploy 'false' (or update the definition) to stop evaluation without deleting the agent. Equivalent to the portal Start/Stop toolbar button."
+}

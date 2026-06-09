@@ -15,7 +15,12 @@
     "name": "zava-fabric-ws",
     "use_existing": false,
     "existing_workspace_id": "<WORKSPACE_GUID>",
-    "identity_object_id": "<WORKSPACE_IDENTITY_GUID>"
+    "identity_object_id": "<WORKSPACE_IDENTITY_GUID>",
+    "_comment_step10": "Fields below are read by fabric/scripts/00_create_workspace.py (Step 10). description: workspace description on create. capacity_ref: which Fabric capacity (by display name) to bind; defaults to capacity.name above. enable_workspace_identity: toggle Workspace Identity provisioning (default true). admin_object_id: optional deploy-SP object id to add as workspace Admin (placeholder; az ad sp show --id <app-id> --query id).",
+    "description": "Zava car-rental demo workspace",
+    "capacity_ref": "zava-fabric-cap",
+    "enable_workspace_identity": true,
+    "admin_object_id": "<DEPLOY_SP_OBJECT_ID>"
   },
 
   "source": {
