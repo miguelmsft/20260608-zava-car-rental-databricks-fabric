@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "zava/sites",
+  "title": "Sites",
+  "description": "Zava rental locations. Seattle is HQ; multi-US-city footprint with lat/long for map visuals. Parent of Vehicles, Reservations, Rentals, Maintenance, Telematics.",
+  "type": "object",
+  "x-primary-key": "site_id",
+  "required": ["site_id", "site_code", "site_name", "city", "state", "latitude", "longitude", "is_hq", "parking_capacity", "opened_date"],
+  "properties": {
+    "site_id": {"type": "string", "description": "PK, e.g. S001."},
+    "site_code": {"type": "string", "description": "Human-friendly code, e.g. WA001."},
+    "site_name": {"type": "string", "description": "e.g. 'Zava Seattle HQ'."},
+    "city": {"type": "string"},
+    "state": {"type": "string", "description": "2-letter US state."},
+    "latitude": {"type": "number", "description": "Decimal degrees; powers multi-city map visuals."},
+    "longitude": {"type": "number", "description": "Decimal degrees."},
+    "is_hq": {"type": "boolean", "description": "True only for the Seattle headquarters."},
+    "parking_capacity": {"type": "integer", "description": "Parking spots; denominator context for utilization."},
+    "opened_date": {"type": "string", "format": "date"}
+  }
+}

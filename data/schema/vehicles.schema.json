@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "zava/vehicles",
+  "title": "Vehicles",
+  "description": "The Zava fleet. FK to VehicleClasses and Sites (home + current). Drives fleet utilization & idle-vehicle KPIs.",
+  "type": "object",
+  "x-primary-key": "vehicle_id",
+  "x-foreign-keys": {
+    "vehicle_class_id": "vehicle_classes.vehicle_class_id",
+    "home_site_id": "sites.site_id",
+    "current_site_id": "sites.site_id"
+  },
+  "required": ["vehicle_id", "vin", "vehicle_class_id", "make", "model", "model_year", "color", "license_plate", "home_site_id", "current_site_id", "status", "odometer_miles", "acquired_date"],
+  "properties": {
+    "vehicle_id": {"type": "string", "description": "PK, e.g. V00012."},
+    "vin": {"type": "string", "description": "Synthetic VIN-like token (not a real VIN)."},
+    "vehicle_class_id": {"type": "string", "description": "FK -> VehicleClasses."},
+    "make": {"type": "string"},
+    "model": {"type": "string"},
+    "model_year": {"type": "integer"},
+    "color": {"type": "string"},
+    "license_plate": {"type": "string", "description": "Synthetic plate token."},
+    "home_site_id": {"type": "string", "description": "FK -> Sites (base location)."},
+    "current_site_id": {"type": "string", "description": "FK -> Sites (where the car is now; differs after one-way trips)."},
+    "status": {"type": "string", "enum": ["available", "rented", "idle", "maintenance"], "description": "'idle' feeds the idle-vehicle KPI."},
+    "odometer_miles": {"type": "integer"},
+    "acquired_date": {"type": "string", "format": "date"}
+  }
+}

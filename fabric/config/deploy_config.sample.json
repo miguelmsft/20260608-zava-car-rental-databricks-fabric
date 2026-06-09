@@ -1,0 +1,54 @@
+{
+  "$schema_note": "Zava demo Fabric/orchestration config. Copy to deploy_config.json (gitignored) and replace <PLACEHOLDER> tokens. NO secrets in this file: secrets are referenced by Key Vault name or acquired via `az login` at runtime. Validate with: python scripts/config_schema.py --validate fabric/config/deploy_config.sample.json databricks/config/databricks_config.sample.json",
+  "region": "eastus2",
+
+  "capacity": {
+    "_comment": "Fresh-provision path (use_existing=false) is the default. To bring your own Fabric capacity, set use_existing=true and fill existing_capacity_id with a real ARM resource id.",
+    "sku": "F64",
+    "name": "zava-fabric-cap",
+    "use_existing": false,
+    "existing_capacity_id": "/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/<RESOURCE_GROUP>/providers/Microsoft.Fabric/capacities/<CAPACITY_NAME>"
+  },
+
+  "workspace": {
+    "_comment": "Fresh path creates the workspace + Workspace Identity (Step 10). Existing path attaches to existing_workspace_id. identity_object_id is a placeholder until Workspace Identity is created in Step 10.",
+    "name": "zava-fabric-ws",
+    "use_existing": false,
+    "existing_workspace_id": "<WORKSPACE_GUID>",
+    "identity_object_id": "<WORKSPACE_IDENTITY_GUID>"
+  },
+
+  "source": {
+    "databricks_catalog": "zava",
+    "gold_schema": "gold"
+  },
+
+  "ingestion": {
+    "variation": "2A"
+  },
+
+  "features": {
+    "enable_ontology": true,
+    "enable_data_agent": true,
+    "enable_eventhouse": true,
+    "enable_activator_email": true,
+    "enable_operations_agent": false
+  },
+
+  "realtime": {
+    "_comment": "Required when features.enable_eventhouse=true.",
+    "eventhouse_name": "zava-eh",
+    "kql_database_name": "zava_rt",
+    "kql_table_name": "Telematics"
+  },
+
+  "alerting": {
+    "_comment": "Required when features.enable_activator_email=true. Placeholder only — never commit a real address.",
+    "site_manager_email": "manager@zava.example"
+  },
+
+  "governance": {
+    "purview_account": "zava-purview",
+    "policy_weaver_enabled": true
+  }
+}

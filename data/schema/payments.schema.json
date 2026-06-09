@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "zava/payments",
+  "title": "Payments",
+  "description": "Settlement for closed rentals. pickup_site_id is denormalized so revenue-per-site rolls up without a join. Drives the revenue/site KPI.",
+  "type": "object",
+  "x-primary-key": "payment_id",
+  "x-foreign-keys": {
+    "rental_id": "rentals.rental_id",
+    "customer_id": "customers.customer_id",
+    "pickup_site_id": "sites.site_id"
+  },
+  "required": ["payment_id", "rental_id", "customer_id", "pickup_site_id", "rental_days", "base_amount_usd", "one_way_fee_usd", "taxes_fees_usd", "total_amount_usd", "currency", "payment_method", "payment_ts", "status"],
+  "properties": {
+    "payment_id": {"type": "string", "description": "PK, e.g. P00000123."},
+    "rental_id": {"type": "string", "description": "FK -> Rentals."},
+    "customer_id": {"type": "string", "description": "FK -> Customers."},
+    "pickup_site_id": {"type": "string", "description": "FK -> Sites (denormalized for revenue/site KPI)."},
+    "rental_days": {"type": "integer"},
+    "base_amount_usd": {"type": "number", "description": "daily_base_rate * rental_days."},
+    "one_way_fee_usd": {"type": "number", "description": "Surcharge when the rental is one-way."},
+    "taxes_fees_usd": {"type": "number"},
+    "total_amount_usd": {"type": "number", "description": "Revenue measure summed for the revenue/site KPI."},
+    "currency": {"type": "string", "const": "USD"},
+    "payment_method": {"type": "string"},
+    "payment_ts": {"type": "string", "format": "date-time"},
+    "status": {"type": "string", "enum": ["captured", "refunded", "failed"]}
+  }
+}

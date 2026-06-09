@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "zava/telematics",
+  "title": "Telematics (batch snapshot)",
+  "description": "Latest-known telematics reading per vehicle, produced by generate_zava_data.py as a batch table for the medallion pipeline / report. The LIVE feed for Real-Time Intelligence is produced by generate_telematics_stream.py (see telematics_event.schema.json).",
+  "type": "object",
+  "x-primary-key": "telematics_id",
+  "x-foreign-keys": {
+    "vehicle_id": "vehicles.vehicle_id",
+    "site_id": "sites.site_id"
+  },
+  "required": ["telematics_id", "vehicle_id", "site_id", "snapshot_ts", "ignition_state", "idle_minutes", "odometer_miles", "latitude", "longitude", "speed_mph", "fuel_or_soc_pct"],
+  "properties": {
+    "telematics_id": {"type": "string", "description": "PK, e.g. T000123."},
+    "vehicle_id": {"type": "string", "description": "FK -> Vehicles."},
+    "site_id": {"type": "string", "description": "FK -> Sites (nearest/current)."},
+    "snapshot_ts": {"type": "string", "format": "date-time"},
+    "ignition_state": {"type": "string", "enum": ["on", "off"]},
+    "idle_minutes": {"type": "integer", "description": "High values flag idle/under-utilized vehicles."},
+    "odometer_miles": {"type": "integer"},
+    "fault_code": {"type": ["string", "null"], "description": "OBD-II-like code or null."},
+    "latitude": {"type": "number"},
+    "longitude": {"type": "number"},
+    "speed_mph": {"type": "integer"},
+    "fuel_or_soc_pct": {"type": "integer", "description": "Fuel % (ICE) or state-of-charge % (EV)."}
+  }
+}

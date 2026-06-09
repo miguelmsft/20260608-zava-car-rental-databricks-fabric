@@ -15,6 +15,24 @@ azure.yaml.local
 *.tfstate.*
 .terraform/
 
+# ---- Real deployment config (commit only *.sample.json templates) ----
+# Resolved configs carry environment-specific resource ids and must stay local.
+deploy_config.json
+databricks_config.json
+**/config/deploy_config.json
+**/config/databricks_config.json
+*.local.json
+# Defensive: always keep the committed templates tracked.
+!*.sample.json
+
+# ---- Bicep / Terraform parameter files with real (non-sample) values ----
+# dev.bicepparam and existing-resources.bicepparam ship as placeholder templates
+# and ARE tracked; copy them to *.local.bicepparam (ignored) for real deployments.
+*.local.bicepparam
+*.secrets.bicepparam
+*.tfvars
+*.tfvars.json
+
 # ---- Orchestration / workflow artifacts (internal, not shipped) ----
 demo-status.md
 agent-reviews/
@@ -40,6 +58,10 @@ build/
 *.log
 .tmp/
 tmp/
+_tmp/
+
+# ---- Generated demo data output & scratch (never commit) ----
+data/output/
 
 # ---- OS / editor ----
 .DS_Store

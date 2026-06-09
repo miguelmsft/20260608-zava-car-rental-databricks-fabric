@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "zava/customers",
+  "title": "Customers",
+  "description": "Synthetic Zava customers. Contains SYNTHETIC PII-like columns (email, phone) for Purview classification / DLP / column-mask demos. All values are fake (@example.com, 555 numbers).",
+  "type": "object",
+  "x-primary-key": "customer_id",
+  "x-pii-like-columns": ["email", "phone"],
+  "required": ["customer_id", "first_name", "last_name", "email", "phone", "loyalty_tier", "home_city", "home_state", "join_date"],
+  "properties": {
+    "customer_id": {"type": "string", "description": "PK, e.g. C000123."},
+    "first_name": {"type": "string", "description": "Synthetic."},
+    "last_name": {"type": "string", "description": "Synthetic."},
+    "email": {"type": "string", "description": "SYNTHETIC PII-like; always @example.com. For label/DLP/mask demos."},
+    "phone": {"type": "string", "description": "SYNTHETIC PII-like; always +1-555-xxx-xxxx. For label/DLP/mask demos."},
+    "loyalty_tier": {"type": "string", "enum": ["None", "Silver", "Gold", "Platinum"]},
+    "home_city": {"type": "string"},
+    "home_state": {"type": "string"},
+    "join_date": {"type": "string", "format": "date"}
+  }
+}

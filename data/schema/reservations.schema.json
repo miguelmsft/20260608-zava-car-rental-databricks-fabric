@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "zava/reservations",
+  "title": "Reservations",
+  "description": "Customer bookings (intent to rent). A fulfilled reservation becomes a Rental. FK to Customers, Sites (pickup + return), VehicleClasses.",
+  "type": "object",
+  "x-primary-key": "reservation_id",
+  "x-foreign-keys": {
+    "customer_id": "customers.customer_id",
+    "vehicle_class_id": "vehicle_classes.vehicle_class_id",
+    "pickup_site_id": "sites.site_id",
+    "return_site_id": "sites.site_id"
+  },
+  "required": ["reservation_id", "customer_id", "vehicle_class_id", "pickup_site_id", "return_site_id", "reserved_at", "pickup_date", "planned_return_date", "status"],
+  "properties": {
+    "reservation_id": {"type": "string", "description": "PK, e.g. R0000123."},
+    "customer_id": {"type": "string", "description": "FK -> Customers."},
+    "vehicle_class_id": {"type": "string", "description": "FK -> VehicleClasses (class requested, not a specific car)."},
+    "pickup_site_id": {"type": "string", "description": "FK -> Sites."},
+    "return_site_id": {"type": "string", "description": "FK -> Sites; differs from pickup for one-way bookings."},
+    "reserved_at": {"type": "string", "format": "date-time", "description": "ISO-8601 UTC."},
+    "pickup_date": {"type": "string", "format": "date"},
+    "planned_return_date": {"type": "string", "format": "date"},
+    "status": {"type": "string", "enum": ["booked", "fulfilled", "cancelled", "noshow"]}
+  }
+}

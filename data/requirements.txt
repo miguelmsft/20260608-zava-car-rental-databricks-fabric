@@ -1,0 +1,5 @@
+# Zava synthetic data generators — Phase 0 (local only)
+# Pinned to widely-available, pure-Python/data libs. No cloud SDKs, no secrets.
+pandas>=2.0
+numpy>=1.24
+pyarrow>=12.0   # Parquet output

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "zava/vehicle_classes",
+  "title": "VehicleClasses",
+  "description": "Rate-card vehicle classes Zava offers. Parent of Vehicles, Reservations, Rentals.",
+  "type": "object",
+  "x-primary-key": "vehicle_class_id",
+  "required": ["vehicle_class_id", "class_name", "category", "daily_base_rate_usd", "seats", "is_ev"],
+  "properties": {
+    "vehicle_class_id": {"type": "string", "description": "PK, e.g. VC001."},
+    "class_name": {"type": "string", "description": "Economy, Compact, Luxury, Electric SUV, ..."},
+    "category": {"type": "string", "enum": ["Car", "SUV", "Luxury", "Van", "Truck", "EV"]},
+    "daily_base_rate_usd": {"type": "number", "description": "Base daily rate; drives revenue KPI."},
+    "seats": {"type": "integer"},
+    "is_ev": {"type": "boolean"}
+  }
+}

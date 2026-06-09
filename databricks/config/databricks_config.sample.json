@@ -1,0 +1,16 @@
+{
+  "$schema_note": "Zava demo Databricks config. Copy to databricks_config.json (gitignored) and replace <PLACEHOLDER> tokens. NO secrets: the PAT/SP secret is acquired at runtime (az login / Key Vault), never stored here. Validate with: python scripts/config_schema.py --validate fabric/config/deploy_config.sample.json databricks/config/databricks_config.sample.json",
+
+  "workspace": {
+    "_comment": "Fresh path (use_existing=false) provisions the workspace via Bicep (Step 6). To bring your own workspace, set use_existing=true and fill host_url + resource_id with real values; Step 6 is then skipped.",
+    "use_existing": false,
+    "host_url": "https://adb-<WORKSPACE_ID>.<N>.azuredatabricks.net",
+    "resource_id": "/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/<RESOURCE_GROUP>/providers/Microsoft.Databricks/workspaces/<WORKSPACE_NAME>",
+    "sku": "premium"
+  },
+
+  "catalog": "zava",
+  "managed_storage_account": "zavauc",
+  "access_connector_id": "/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/<RESOURCE_GROUP>/providers/Microsoft.Databricks/accessConnectors/<ACCESS_CONNECTOR_NAME>",
+  "data_seed": 42
+}

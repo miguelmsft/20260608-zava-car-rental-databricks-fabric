@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "zava/telematics_event",
+  "title": "Telematics Event (live stream)",
+  "description": "One streaming telematics reading emitted by generate_telematics_stream.py as NDJSON, intended for a Microsoft Fabric Eventstream / Eventhouse (KQL) source (plan Steps 18-20). The Activator rule / Operations Agent watches for idle_minutes > 120 and/or a non-null fault_code; the injected spike window (is_spike=true) produces those conditions for the watch+act demo.",
+  "type": "object",
+  "x-event-time": "ts",
+  "x-foreign-keys": {
+    "vehicle_id": "vehicles.vehicle_id",
+    "site_id": "sites.site_id"
+  },
+  "x-alert-thresholds": {
+    "idle_minutes_alert": 120,
+    "fault_code_alert": "non-null"
+  },
+  "required": ["event_id", "vehicle_id", "site_id", "ts", "ignition_state", "idle_minutes", "odometer_miles", "latitude", "longitude", "speed_mph", "fuel_or_soc_pct", "is_spike"],
+  "properties": {
+    "event_id": {"type": "string", "description": "Unique per event (UUID)."},
+    "vehicle_id": {"type": "string", "description": "FK -> Vehicles."},
+    "site_id": {"type": "string", "description": "FK -> Sites."},
+    "ts": {"type": "string", "format": "date-time", "description": "Event time, ISO-8601 UTC; advances across the feed."},
+    "ignition_state": {"type": "string", "enum": ["on", "off"]},
+    "idle_minutes": {"type": "integer", "description": "Minutes idle; > 120 triggers the idle-vehicle alert."},
+    "odometer_miles": {"type": "integer"},
+    "fault_code": {"type": ["string", "null"], "description": "OBD-II-like code; non-null triggers the maintenance-fault alert."},
+    "latitude": {"type": "number"},
+    "longitude": {"type": "number"},
+    "speed_mph": {"type": "integer"},
+    "fuel_or_soc_pct": {"type": "integer"},
+    "is_spike": {"type": "boolean", "description": "True while the event is an injected, elevated spike reading."}
+  }
+}
