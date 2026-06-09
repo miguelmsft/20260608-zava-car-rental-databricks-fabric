@@ -1,0 +1,30 @@
+# Normalize line endings for a cross-platform, public clone-and-run repo.
+# Text files are stored as LF in the repository; checked out native on Windows.
+* text=auto
+
+# Shell scripts MUST be LF — CRLF breaks them on Linux/macOS ("bad interpreter").
+*.sh   text eol=lf
+
+# PowerShell / Windows scripts: CRLF is conventional (PowerShell accepts both).
+*.ps1  text eol=crlf
+*.psm1 text eol=crlf
+*.cmd  text eol=crlf
+*.bat  text eol=crlf
+
+# Source / config: explicit LF for tools that are sensitive to it.
+*.py    text eol=lf
+*.sql   text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.json  text
+*.tmdl  text eol=lf
+*.bicep text eol=lf
+
+# Treat common binary assets as binary (no EOL normalization, no diff).
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.pbix binary
+*.xlsx binary
