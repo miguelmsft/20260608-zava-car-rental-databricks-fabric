@@ -158,7 +158,19 @@ var fabricTenantIdEffective = empty(fabricTenantId) ? tenant().tenantId : fabric
 // EITHER the explicit applyNetworkHardening flag is set OR a real Step-10 Fabric
 // Workspace Identity (GUID or full resourceId) is supplied. The standard deploy
 // (no identity supplied, flag false) stays a no-op — main.bicep is unchanged for it.
+//
+// BYO / EXISTING-DATABRICKS (Step 28, Important #5): secured V2 hardening is FRESH-PATH ONLY.
+// When useExistingDatabricks=true this template does NOT own the ADLS account (storage-adls.bicep
+// is skipped), so it cannot legally PATCH its networkAcls — hardening is therefore EXPLICITLY
+// skipped here (not silently). Bring-your-own estates apply the same firewall default-deny +
+// trusted-workspace rule + Workspace-Identity RBAC on their own account: see
+// docs/manual-steps.md ("BYO Databricks: secure the Variation-2 shortcut storage"). The skip is
+// surfaced via the networkHardeningSkippedForExistingDatabricks output and logged by deploy.py.
 var applyNetworkHardeningEffective = (applyNetworkHardening || !empty(fabricWorkspaceResourceIdEffective)) && !useExistingDatabricks
+
+// True when hardening WAS requested (flag or workspace id supplied) but is being skipped purely
+// because this is the existing-Databricks (BYO) path — makes the fresh-path-only skip explicit.
+var networkHardeningSkippedForExistingDatabricks = (applyNetworkHardening || !empty(fabricWorkspaceResourceIdEffective)) && useExistingDatabricks
 
 // ---- Step 12 — public-network-access lockdown derivation (R10 §6.3) ----------
 // The firewall only switches to defaultAction = Deny once a real trusted-workspace
@@ -319,3 +331,6 @@ output networkHardeningApplied bool = applyNetworkHardeningEffective ? networkHa
 
 @description('Effective storage firewall default action after hardening (Deny once locked down in Step 12, otherwise the account default).')
 output storageNetworkDefaultAction string = applyNetworkHardeningEffective ? networkHardening.outputs.networkDefaultAction : 'Allow'
+
+@description('True when V2 ADLS hardening was REQUESTED (flag or Fabric workspace id supplied) but skipped because this is the existing-Databricks (BYO) path. Secured V2 hardening is fresh-path only — apply it on the BYO storage account manually (docs/manual-steps.md). Explicit, not silent (Step 28, Important #5).')
+output networkHardeningSkippedForExistingDatabricks bool = networkHardeningSkippedForExistingDatabricks

@@ -114,6 +114,10 @@ DBX_JOB_UC_SETUP = "zava_uc_setup"
 DBX_JOB_MEDALLION = "zava_medallion_pipeline"
 DBX_JOB_CERTIFY = "zava_certify_gold"
 DBX_PIPELINE_LAKEFLOW = "zava_lakeflow_curated"
+DBX_JOB_ACCESS_POLICIES = "zava_access_policies"
+
+# Databricks Asset Bundle definition (source of the per-target catalog name).
+DATABRICKS_YML = os.path.join("databricks", "bundle", "databricks.yml")
 
 # Thin retry around the *subprocess* (each step owns its own REST retry/backoff + LRO poll).
 SUBPROCESS_MAX_ATTEMPTS = 3
@@ -230,6 +234,42 @@ class Deployer:
             ",".join(k for k, v in self.resolved.get("features", {}).items() if v) or "(none)",
         )
 
+        self._check_catalog_coherence()
+
+    def _check_catalog_coherence(self) -> None:
+        """Fail fast unless the selected DAB target catalog == source.databricks_catalog.
+
+        Single-source-of-truth (Step 28): whatever the Databricks Asset Bundle builds for the
+        selected ``--databricks-target`` is exactly what the Fabric mirror/shortcut/governance
+        read. A divergence (e.g. DAB builds ``zava_dev`` while Fabric reads ``zava``) silently
+        points the mirror at a nonexistent catalog, so we reject it here.
+        """
+        target = self.args.databricks_target
+        source_catalog = ((self.raw.get("source", {}) or {}).get("databricks_catalog"))
+        dab_catalog = dab_target_catalog(os.path.join(_REPO_ROOT, DATABRICKS_YML), target)
+        if not dab_catalog:
+            LOG.warning(
+                "Could not resolve the catalog for DAB target %r from %s; skipping catalog "
+                "coherence check.", target, DATABRICKS_YML,
+            )
+            return
+        LOG.info(
+            "Catalog coherence: DAB target %r builds catalog %r; Fabric source.databricks_catalog=%r.",
+            target, dab_catalog, source_catalog,
+        )
+        if (
+            source_catalog
+            and not config_schema.is_placeholder(source_catalog)
+            and source_catalog != dab_catalog
+        ):
+            raise DeployError(
+                f"catalog incoherence: Databricks Asset Bundle target {target!r} builds catalog "
+                f"{dab_catalog!r} but deploy_config.source.databricks_catalog={source_catalog!r}. "
+                f"A default deploy must use ONE catalog name end-to-end. Align them: set "
+                f"source.databricks_catalog={dab_catalog!r}, or choose a --databricks-target whose "
+                f"catalog matches, or edit databricks/bundle/databricks.yml."
+            )
+
     def _databricks_workspace_path(self) -> str:
         if not self.databricks_config_path:
             return "(default)"
@@ -309,12 +349,24 @@ class Deployer:
                 KIND_DATABRICKS,
                 command=["databricks", "bundle", "run", DBX_PIPELINE_LAKEFLOW, "-t", target],
             ))
+            # UC access policies (row filter + column mask) — runs uc/05_access_policies.sql so
+            # Policy Weaver (governance wave, far below) syncs REAL UC policies. Sequenced AFTER
+            # Lakeflow (curated.rentals_curated must exist) and BEFORE the governance wave (Step 28).
+            waves.append(Wave(
+                "dbx_access_policies",
+                "Databricks: apply UC access policies (row filter + column mask; Step 28)",
+                KIND_DATABRICKS,
+                command=["databricks", "bundle", "run", DBX_JOB_ACCESS_POLICIES, "-t", target],
+                note="Runs uc/05_access_policies.sql so Policy Weaver later syncs real UC "
+                     "row-filters/column-masks; after Lakeflow, before the governance wave.",
+            ))
 
         # Wave 3 — Fabric workspace + capacity bind + Workspace Identity.
         waves.append(Wave(
             "fabric_workspace", "Fabric: workspace + capacity bind + Workspace Identity (Step 10)",
-            KIND_FABRIC, command=fab("00_create_workspace.py"), retry=True,
-            note="Fresh path creates the Workspace Identity (long-running REST).",
+            KIND_FABRIC, command=fab("00_create_workspace.py", "--write-config"), retry=True,
+            note="Fresh path creates the Workspace Identity (long-running REST). --write-config "
+                 "persists workspace.workspace_id + workspace.identity_object_id for the hardening wave.",
         ))
         # PAUSE: Workspace Identity UI fallback (R7/R10 — provisionIdentity can be UI-only).
         waves.append(Wave(
@@ -322,8 +374,8 @@ class Deployer:
             pause_prompt=(
                 "If 00_create_workspace.py could not provision the Workspace Identity via REST, "
                 "create it in the UI (Workspace settings -> Workspace identity -> + Workspace "
-                "identity) and set workspace.identity_object_id in deploy_config.json. "
-                "See docs/manual-steps.md (Step 10)."
+                "identity) and set workspace.identity_object_id (and workspace.workspace_id, the "
+                "workspace GUID) in deploy_config.json. See docs/manual-steps.md (Step 10)."
             ),
         ))
 
@@ -350,12 +402,34 @@ class Deployer:
         ))
         # Apply the ADLS network hardening AFTER the shortcut + Workspace Identity exist
         # (trusted-workspace access) — a second Bicep pass with applyNetworkHardening=true.
+        # Step 28: pass the Step-10 workspace GUID + Workspace Identity object id so the firewall
+        # actually locks to default-deny + trusted-workspace rule (otherwise it stays Allow).
         if not self.args.skip_azure:
-            waves.append(Wave(
-                "hardening", "Apply ADLS Gen2 network hardening (Variation 2; Step 12)",
-                KIND_AZURE, command=self._bicep_command(apply_hardening=True),
-                note="Second Bicep pass: applyNetworkHardening=true (trusted-workspace access).",
-            ))
+            if self._databricks_workspace_path() == "existing":
+                # Important #5 — secured V2 hardening is fresh-Databricks only: the BYO ADLS
+                # account is not provisioned by this template, so the hardening module is
+                # intentionally skipped (main.bicep gates on !useExistingDatabricks). Make the
+                # skip EXPLICIT and logged, with a pointer to the BYO procedure — never silent.
+                waves.append(Wave(
+                    "hardening_skipped",
+                    "ADLS hardening SKIPPED — secured V2 hardening is fresh-Databricks only (BYO)",
+                    KIND_PAUSE,
+                    pause_prompt=(
+                        "Existing-Databricks (BYO) path: the secured Variation-2 ADLS hardening "
+                        "(firewall default-deny + Fabric trusted-workspace rule + Workspace-Identity "
+                        "RBAC) is NOT applied by this IaC because it does not own your ADLS account. "
+                        "Apply it manually on your storage account — see docs/manual-steps.md "
+                        "(BYO Databricks: secure the Variation-2 shortcut storage)."
+                    ),
+                ))
+            else:
+                waves.append(Wave(
+                    "hardening", "Apply ADLS Gen2 network hardening (Variation 2; Step 12)",
+                    KIND_AZURE, command=self._bicep_command(apply_hardening=True),
+                    note="Second Bicep pass: applyNetworkHardening=true + fabricWorkspaceId + "
+                         "workspaceIdentityObjectId (trusted-workspace access). Fails fast if the "
+                         "Step-10 workspace GUID / identity object id are missing.",
+                ))
 
         # Wave 5 — Thin Fabric gold (consumption-layer aggregation notebook).
         waves.append(Wave(
@@ -476,6 +550,19 @@ class Deployer:
             return INFRA_PARAMS_EXISTING
         return INFRA_PARAMS_FRESH
 
+    def _hardening_ids(self) -> tuple:
+        """Resolve (fabricWorkspaceId GUID, workspaceIdentityObjectId) from the workspace config.
+
+        The Step-10 ``00_create_workspace.py --write-config`` persists ``workspace.workspace_id``
+        (the created/resolved Fabric workspace GUID) and ``workspace.identity_object_id``. The
+        existing-workspace path supplies ``existing_workspace_id``. Values may be ``<PLACEHOLDER>``
+        tokens before Step 10 runs; the fail-fast check (real runs only) rejects those.
+        """
+        ws = self.raw.get("workspace", {}) or {}
+        guid = ws.get("workspace_id") or ws.get("existing_workspace_id")
+        obj = ws.get("identity_object_id")
+        return guid, obj
+
     def _bicep_command(self, *, apply_hardening: bool) -> List[str]:
         rg = self.args.resource_group or os.environ.get("AZURE_RESOURCE_GROUP", "zava-rg")
         cmd = [
@@ -490,7 +577,55 @@ class Deployer:
             # Override the hardening switches on the second pass (idempotent).
             cmd += ["--parameters", "applyNetworkHardening=true",
                     "--parameters", "disableStoragePublicNetworkAccess=true"]
+            # Step 28: forward the Step-10 workspace GUID + Workspace Identity object id so
+            # network-hardening.bicep actually adds the trusted-workspace rule + defaultAction=Deny
+            # + Workspace-Identity RBAC (main.bicep builds the R10 resourceId from fabricWorkspaceId).
+            guid, obj = self._hardening_ids()
+            if guid:
+                cmd += ["--parameters", f"fabricWorkspaceId={guid}"]
+            if obj:
+                cmd += ["--parameters", f"workspaceIdentityObjectId={obj}"]
         return cmd
+
+    def _require_hardening_ids(self) -> None:
+        """Fail fast when the V2 hardening wave lacks the Step-10 workspace GUID / identity id."""
+        guid, obj = self._hardening_ids()
+        missing = []
+        if not guid or config_schema.is_placeholder(guid):
+            missing.append("workspace.workspace_id (or workspace.existing_workspace_id) — the Fabric workspace GUID")
+        if not obj or config_schema.is_placeholder(obj):
+            missing.append("workspace.identity_object_id — the Workspace Identity object id")
+        if missing:
+            raise DeployError(
+                "ADLS V2 hardening cannot proceed — missing required Step-10 ids: "
+                + "; ".join(missing)
+                + ". Run fabric/scripts/00_create_workspace.py --write-config first (it persists "
+                "both into the resolved deploy_config.json), or set them manually. Without them the "
+                "storage firewall would stay open (defaultAction=Allow) and the shortcut would "
+                "deploy UNSECURED."
+            )
+
+    def _reload_raw_config(self) -> None:
+        """Re-read the deploy config from disk to pick up ids persisted mid-run (Step 10)."""
+        if self.deploy_config_path and os.path.exists(self.deploy_config_path):
+            try:
+                with open(self.deploy_config_path, "r", encoding="utf-8") as fh:
+                    self.raw = json.load(fh)
+            except (OSError, json.JSONDecodeError) as exc:
+                LOG.warning("could not reload config %s: %s", _rel(self.deploy_config_path), exc)
+
+    def _run_hardening_wave(self, wave: "Wave") -> int:
+        """Execute the ADLS hardening Bicep pass, refreshing ids and failing fast if missing."""
+        # The workspace wave (00_create_workspace.py --write-config) persists the ids DURING the
+        # run; reload so this wave sees them rather than the stale start-of-run snapshot.
+        self._reload_raw_config()
+        if self.dry_run:
+            print("    -> dry-run: command not executed.")
+            return 0
+        self._require_hardening_ids()
+        cmd = self._bicep_command(apply_hardening=True)
+        LOG.info("    hardening cmd (refreshed): %s", _render_cmd(cmd))
+        return self._invoke(cmd, wave, attempts=1)
 
     # -- execution --------------------------------------------------------
 
@@ -592,6 +727,9 @@ class Deployer:
             LOG.warning("    -> no TTY available; treating as acknowledged.")
 
     def _run_wave(self, wave: Wave) -> int:
+        # The hardening wave owns its own execution (reload ids + fail-fast + refreshed cmd).
+        if wave.key == "hardening":
+            return self._run_hardening_wave(wave)
         cmd = self._final_command(wave)
         if self.dry_run:
             # Fabric/governance steps support --dry-run, so we *do* invoke them to surface
@@ -648,6 +786,82 @@ def _resolve_config_path(explicit: Optional[str], candidates) -> Optional[str]:
         if os.path.exists(cand):
             return cand
     return None
+
+
+def dab_target_catalog(databricks_yml_path: str, target: str) -> Optional[str]:
+    """Resolve the Unity Catalog catalog a Databricks Asset Bundle target builds.
+
+    Reads ``databricks/bundle/databricks.yml`` and returns the effective ``catalog`` variable
+    for ``target``: the per-target override under ``targets.<target>.variables.catalog`` if
+    present, else the top-level ``variables.catalog.default``. Returns ``None`` if the file or
+    the value cannot be resolved.
+
+    This is a deliberately small, stdlib-only indentation-aware parser (no PyYAML dependency)
+    so the offline tests stay pure. The bundle file is repo-owned with a stable shape.
+    """
+    try:
+        with open(databricks_yml_path, "r", encoding="utf-8") as fh:
+            lines = fh.readlines()
+    except OSError:
+        return None
+
+    def _strip_val(raw: str) -> str:
+        return raw.strip().strip('"').strip("'")
+
+    default_catalog: Optional[str] = None
+    target_catalog: Optional[str] = None
+
+    # Top-level variables.catalog.default
+    in_vars = False
+    in_catalog_var = False
+    for line in lines:
+        stripped = line.rstrip("\n")
+        if not stripped.strip() or stripped.lstrip().startswith("#"):
+            continue
+        indent = len(stripped) - len(stripped.lstrip(" "))
+        content = stripped.strip()
+        if indent == 0:
+            in_vars = content == "variables:"
+            in_catalog_var = False
+            continue
+        if in_vars and indent == 2 and content.rstrip(":") == "catalog":
+            in_catalog_var = True
+            continue
+        if in_vars and indent == 2 and content.endswith(":"):
+            in_catalog_var = False
+        if in_vars and in_catalog_var and content.startswith("default:"):
+            default_catalog = _strip_val(content.split(":", 1)[1])
+            in_catalog_var = False
+
+    # targets.<target>.variables.catalog
+    in_targets = False
+    cur_target: Optional[str] = None
+    in_target_vars = False
+    for line in lines:
+        stripped = line.rstrip("\n")
+        if not stripped.strip() or stripped.lstrip().startswith("#"):
+            continue
+        indent = len(stripped) - len(stripped.lstrip(" "))
+        content = stripped.strip()
+        if indent == 0:
+            in_targets = content == "targets:"
+            cur_target = None
+            in_target_vars = False
+            continue
+        if not in_targets:
+            continue
+        if indent == 2 and content.endswith(":"):
+            cur_target = content[:-1].strip()
+            in_target_vars = False
+            continue
+        if cur_target == target and indent == 4 and content.rstrip(":") == "variables":
+            in_target_vars = True
+            continue
+        if cur_target == target and in_target_vars and indent >= 6 and content.startswith("catalog:"):
+            target_catalog = _strip_val(content.split(":", 1)[1])
+            break
+
+    return target_catalog or default_catalog
 
 
 def _render_cmd(cmd: List[str]) -> str:

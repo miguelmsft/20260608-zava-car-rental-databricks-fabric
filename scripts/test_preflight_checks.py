@@ -22,6 +22,7 @@ They lock in the three reworked behaviours the reviewer flagged:
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 import types
@@ -34,6 +35,11 @@ if _THIS_DIR not in sys.path:
 import preflight_checks  # noqa: E402
 import deploy  # noqa: E402
 import teardown  # noqa: E402
+
+_REPO_ROOT = os.path.dirname(_THIS_DIR)
+_SAMPLE_DEPLOY_CONFIG = os.path.join(_REPO_ROOT, "fabric", "config", "deploy_config.sample.json")
+_DATABRICKS_YML = os.path.join(_REPO_ROOT, "databricks", "bundle", "databricks.yml")
+_ACCESS_POLICIES_SQL = os.path.join(_REPO_ROOT, "databricks", "uc", "05_access_policies.sql")
 
 
 def _fake_proc(returncode=0, stdout="", stderr=""):
@@ -292,6 +298,173 @@ class NotFoundClassifierTests(unittest.TestCase):
         for text in ("AuthorizationFailed", "network is unreachable", "429 TooManyRequests",
                      ""):
             self.assertFalse(teardown._is_idempotent_not_found(text), text)
+
+
+# ---------------------------------------------------------------------------
+# Step 28 remediation — wiring & config coherence (offline, pure-stdlib)
+# ---------------------------------------------------------------------------
+
+def _load_sample_deploy_config() -> dict:
+    with open(_SAMPLE_DEPLOY_CONFIG, "r", encoding="utf-8") as fh:
+        return json.load(fh)
+
+
+def _make_dry_run_deployer() -> "deploy.Deployer":
+    """Build a Deployer over the committed sample config in dry-run (no auth, no mutation)."""
+    args = deploy.build_arg_parser().parse_args(["--dry-run", "--skip-preflight"])
+    dep = deploy.Deployer(args)
+    dep.load_and_validate_config()
+    return dep
+
+
+class CatalogCoherenceTests(unittest.TestCase):
+    """Step 28 (a) — the selected DAB-target catalog must equal source.databricks_catalog."""
+
+    def test_dev_target_catalog_matches_source(self):
+        sample = _load_sample_deploy_config()
+        source_catalog = sample["source"]["databricks_catalog"]
+        dab_catalog = deploy.dab_target_catalog(_DATABRICKS_YML, "dev")
+        self.assertEqual(
+            dab_catalog, source_catalog,
+            "default DAB target 'dev' must build the same catalog the Fabric config reads",
+        )
+
+    def test_prod_target_catalog_matches_source(self):
+        sample = _load_sample_deploy_config()
+        source_catalog = sample["source"]["databricks_catalog"]
+        self.assertEqual(deploy.dab_target_catalog(_DATABRICKS_YML, "prod"), source_catalog)
+
+    def test_deployer_load_does_not_raise_on_coherent_sample(self):
+        # load_and_validate_config runs the fail-fast coherence guard; the sample is coherent.
+        dep = _make_dry_run_deployer()
+        self.assertEqual(dep.raw["source"]["databricks_catalog"],
+                         deploy.dab_target_catalog(_DATABRICKS_YML, "dev"))
+
+    def test_incoherent_catalog_fails_fast(self):
+        args = deploy.build_arg_parser().parse_args(["--dry-run", "--skip-preflight"])
+        dep = deploy.Deployer(args)
+        dep.resolved = {"kind": "fabric", "features": {}}
+        dep.raw = {"source": {"databricks_catalog": "definitely_not_the_dab_catalog"}}
+        with self.assertRaises(deploy.DeployError):
+            dep._check_catalog_coherence()
+
+
+class ConfigContractCoverageTests(unittest.TestCase):
+    """Step 28 (b) — every config key the Fabric scripts read is declared in the sample/schema."""
+
+    # (section, key) pairs the fabric/scripts/*.py read (10/20/30/50/70/80 + 00).
+    SCRIPT_READ_KEYS = {
+        "source": ("databricks_catalog", "gold_schema", "databricks_workspace_url"),
+        "mirroring": ("databricks_connection_id", "mode", "databricks_workspace_url",
+                      "storage_connection_id", "item_name", "description", "auto_sync", "schemas"),
+        "shortcut": ("connection_id", "abfss_path", "adls_location", "adls_subpath",
+                     "lakehouse_id", "lakehouse_name", "name", "path"),
+        "lakehouse": ("name", "id"),
+        "semantic_model": ("name", "id", "lakehouse_id", "lakehouse_name", "rebind_report",
+                           "source_name", "source_type", "thin_gold_schema"),
+        "report": ("name", "semantic_model_id"),
+        "ontology": ("name", "graph_name"),
+        "data_agent": ("name", "graph_name", "semantic_model_name"),
+        "operations_agent": ("agent_name", "message_recipient_upn", "should_run",
+                             "action_pipeline_id", "action_pipeline_name", "definition_part_path"),
+        "realtime": ("eventhouse_name", "kql_database_name", "kql_table_name"),
+        "alerting": ("site_manager_email",),
+        "workspace": ("name", "existing_workspace_id", "workspace_id", "identity_object_id"),
+    }
+
+    def test_every_script_read_key_is_declared_in_sample(self):
+        sample = _load_sample_deploy_config()
+        missing = []
+        for section, keys in self.SCRIPT_READ_KEYS.items():
+            sec = sample.get(section)
+            if not isinstance(sec, dict):
+                missing.append(f"{section} (section absent)")
+                continue
+            for key in keys:
+                if key not in sec:
+                    missing.append(f"{section}.{key}")
+        self.assertEqual(missing, [], f"sample config missing script-read keys: {missing}")
+
+    def test_sample_config_validates_against_schema(self):
+        import config_schema  # noqa: WPS433 (local import keeps test self-contained)
+        # Validation must pass with all the newly declared sections present (placeholders ok).
+        result = config_schema.validate_file(_SAMPLE_DEPLOY_CONFIG)
+        self.assertEqual(result["kind"], "fabric")
+
+    def test_schema_requires_core_connection_ids(self):
+        import config_schema  # noqa: WPS433
+        # Removing a required connection id (manual OAuth) must now FAIL validation.
+        sample = _load_sample_deploy_config()
+        sample["mirroring"].pop("databricks_connection_id", None)
+        with self.assertRaises(config_schema.ConfigError):
+            config_schema.validate_deploy_config(sample)
+        sample2 = _load_sample_deploy_config()
+        sample2["shortcut"].pop("connection_id", None)
+        with self.assertRaises(config_schema.ConfigError):
+            config_schema.validate_deploy_config(sample2)
+
+
+class HardeningBicepCommandTests(unittest.TestCase):
+    """Step 28 (c) — the hardening Bicep command carries the workspace GUID + identity object id."""
+
+    def test_hardening_command_includes_ids(self):
+        dep = _make_dry_run_deployer()
+        cmd = dep._bicep_command(apply_hardening=True)
+        joined = " ".join(cmd)
+        self.assertIn("applyNetworkHardening=true", joined)
+        self.assertIn("fabricWorkspaceId=", joined,
+                      "hardening command must pass the Fabric workspace GUID")
+        self.assertIn("workspaceIdentityObjectId=", joined,
+                      "hardening command must pass the Workspace Identity object id")
+
+    def test_base_command_does_not_include_hardening_ids(self):
+        dep = _make_dry_run_deployer()
+        joined = " ".join(dep._bicep_command(apply_hardening=False))
+        self.assertNotIn("fabricWorkspaceId=", joined)
+        self.assertNotIn("applyNetworkHardening=true", joined)
+
+    def test_real_run_fails_fast_on_placeholder_ids(self):
+        # On a real (non-dry-run) run, placeholder ids must be rejected before deploying.
+        args = deploy.build_arg_parser().parse_args(["--skip-preflight"])
+        dep = deploy.Deployer(args)
+        dep.load_and_validate_config()  # sample has <WORKSPACE_GUID> / <WORKSPACE_IDENTITY_GUID>
+        with self.assertRaises(deploy.DeployError):
+            dep._require_hardening_ids()
+
+
+class AccessPolicyReachabilityTests(unittest.TestCase):
+    """Step 28 (d) — 05_access_policies.sql is reachable from the deploy/DAB plan before governance."""
+
+    def test_access_policy_wave_precedes_governance(self):
+        dep = _make_dry_run_deployer()
+        waves = dep.build_plan()
+        keys = [w.key for w in waves]
+        self.assertIn("dbx_access_policies", keys)
+        self.assertIn("policy_weaver", keys)
+        self.assertLess(
+            keys.index("dbx_access_policies"), keys.index("policy_weaver"),
+            "UC access policies must be applied before the Policy Weaver (governance) wave",
+        )
+
+    def test_access_policy_wave_runs_the_dab_job(self):
+        dep = _make_dry_run_deployer()
+        wave = next(w for w in dep.build_plan() if w.key == "dbx_access_policies")
+        self.assertIn("zava_access_policies", wave.command)
+
+    def test_dab_defines_access_policies_job_running_the_sql(self):
+        with open(_DATABRICKS_YML, "r", encoding="utf-8") as fh:
+            dab = fh.read()
+        self.assertIn("zava_access_policies:", dab, "DAB must define the zava_access_policies job")
+        self.assertIn("05_access_policies.sql", dab,
+                      "DAB access-policy job must run uc/05_access_policies.sql")
+
+    def test_access_policies_sql_is_dab_parameterized(self):
+        self.assertTrue(os.path.exists(_ACCESS_POLICIES_SQL))
+        with open(_ACCESS_POLICIES_SQL, "r", encoding="utf-8") as fh:
+            sql = fh.read()
+        # Named markers the DAB SQL task binds (catalog / curated_schema / gold_schema).
+        for marker in (":catalog", ":curated_schema", ":gold_schema"):
+            self.assertIn(marker, sql, f"05_access_policies.sql must bind {marker} from the DAB")
 
 
 if __name__ == "__main__":

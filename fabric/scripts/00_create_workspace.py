@@ -635,13 +635,27 @@ def add_admin_role(token: str, workspace_id: str, object_id: str) -> None:
 # Optional config write-back (never touches committed *.sample.json)
 # ---------------------------------------------------------------------------
 
-def write_identity_to_config(config_path: Optional[str], object_id: str) -> None:
+def write_state_to_config(
+    config_path: Optional[str],
+    *,
+    workspace_id: Optional[str] = None,
+    object_id: Optional[str] = None,
+) -> None:
+    """Persist the runtime-resolved workspace GUID and Workspace Identity object id.
+
+    Step 28 wiring: the later ADLS-hardening wave (`scripts/deploy.py`) needs BOTH the
+    Fabric **workspace GUID** (to construct the R10 trusted-workspace resourceId) and the
+    Workspace Identity **object id** (Storage Blob Data Reader RBAC). This writes them into
+    the resolved (non-sample) config under ``workspace.workspace_id`` and
+    ``workspace.identity_object_id`` so subsequent waves read one source of truth. Never
+    touches a committed ``*.sample.json``.
+    """
     if not config_path:
         LOG.warning("--write-config requested but no config file is resolved; skipping write-back.")
         return
     if os.path.basename(config_path).endswith(".sample.json"):
         LOG.warning(
-            "refusing to write the captured identity object id into the committed sample config %s; "
+            "refusing to write captured workspace state into the committed sample config %s; "
             "copy it to deploy_config.json (gitignored) and re-run with --write-config.",
             config_path,
         )
@@ -650,11 +664,17 @@ def write_identity_to_config(config_path: Optional[str], object_id: str) -> None
     cfg.setdefault("workspace", {})
     if not isinstance(cfg["workspace"], dict):
         raise WorkspaceError(f"{config_path}: 'workspace' is not an object")
-    cfg["workspace"]["identity_object_id"] = object_id
+    if workspace_id:
+        cfg["workspace"]["workspace_id"] = workspace_id
+    if object_id:
+        cfg["workspace"]["identity_object_id"] = object_id
     with open(config_path, "w", encoding="utf-8") as fh:
         json.dump(cfg, fh, indent=2)
         fh.write("\n")
-    LOG.info("Wrote workspace.identity_object_id=%s into %s", object_id, config_path)
+    LOG.info(
+        "Wrote workspace.workspace_id=%s and workspace.identity_object_id=%s into %s",
+        workspace_id or "<unchanged>", object_id or "<unchanged>", config_path,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -706,10 +726,18 @@ def run(plan: WorkspacePlan, *, dry_run: bool = False, write_config: bool = Fals
                 "(set this into workspace.identity_object_id for Step 12 ADLS hardening).",
                 identity_object_id,
             )
-            if write_config:
-                write_identity_to_config(plan.config_path, identity_object_id)
     else:
         LOG.info("Workspace Identity provisioning disabled (workspace.enable_workspace_identity=false).")
+
+    # Persist BOTH the resolved workspace GUID and the captured identity object id so the
+    # downstream Step-28 ADLS hardening wave (scripts/deploy.py) can pass fabricWorkspaceId +
+    # workspaceIdentityObjectId to Bicep from a single source of truth (never a sample config).
+    if write_config:
+        write_state_to_config(
+            plan.config_path,
+            workspace_id=workspace_id,
+            object_id=identity_object_id,
+        )
 
     # 4. Optional admin role assignment for the deploy SP.
     if plan.admin_object_id:
@@ -760,6 +788,11 @@ def _print_dry_run(plan: WorkspacePlan) -> int:
             "{principal.id=%s, role=Admin}.",
             FABRIC_API_BASE, plan.admin_object_id,
         )
+    LOG.info(
+        "[DRY-RUN] With --write-config, would persist workspace.workspace_id=<resolved-guid> and "
+        "workspace.identity_object_id=<captured-object-id> into %s for the Step-28 ADLS hardening wave.",
+        plan.config_path or "<resolved deploy_config.json>",
+    )
     return 0
 
 
@@ -805,7 +838,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--write-config", action="store_true",
-        help="Persist the captured identity object id into the resolved (non-sample) config.",
+        help="Persist the resolved workspace GUID + captured identity object id into the "
+             "resolved (non-sample) config (workspace.workspace_id / workspace.identity_object_id).",
     )
     parser.add_argument(
         "--dry-run", action="store_true",

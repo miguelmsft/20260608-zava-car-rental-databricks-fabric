@@ -176,6 +176,26 @@ def fabric_sku_units(sku: str) -> int | None:
     return int(match.group(1)) if match else None
 
 
+def optional_string(obj: Dict[str, Any], key: str, path: str) -> Any:
+    """Validate an optional string field: typed if present, otherwise ignored.
+
+    Used for the many soft-optional keys the Fabric scripts read with ``.get()`` defaults
+    (Step 28 config-contract completeness). Presence is NOT required; a wrong (non-string)
+    type still raises a ConfigError naming the JSON path.
+    """
+    present, value = _get(obj, key, path)
+    if present and not isinstance(value, str):
+        raise ConfigError(f"{path}.{key} must be a string (got {type(value).__name__})")
+    return value if present else None
+
+
+def optional_bool(obj: Dict[str, Any], key: str, path: str) -> Any:
+    present, value = _get(obj, key, path)
+    if present and not isinstance(value, bool):
+        raise ConfigError(f"{path}.{key} must be a boolean (got {type(value).__name__})")
+    return value if present else None
+
+
 # ---------------------------------------------------------------------------
 # Fabric / orchestration config  (deploy_config.json)
 # ---------------------------------------------------------------------------
@@ -229,6 +249,14 @@ def validate_deploy_config(cfg: Dict[str, Any]) -> Dict[str, Any]:
         if not isinstance(identity, str):
             raise ConfigError(f"{ws_path}.identity_object_id must be a string")
         check_format(identity, GUID_RE, f"{ws_path}.identity_object_id", "a GUID")
+    # workspace_id is optional: the resolved/created Fabric workspace GUID, persisted by
+    # fabric/scripts/00_create_workspace.py --write-config (Step 28). Consumed by the ADLS
+    # hardening wave to construct the R10 trusted-workspace resourceId. Placeholder until Step 10.
+    present, ws_guid = _get(ws, "workspace_id", ws_path)
+    if present:
+        if not isinstance(ws_guid, str):
+            raise ConfigError(f"{ws_path}.workspace_id must be a string")
+        check_format(ws_guid, GUID_RE, f"{ws_path}.workspace_id", "a GUID")
 
     # --- source ---
     src = require_object(cfg, "source", root)
@@ -287,6 +315,90 @@ def validate_deploy_config(cfg: Dict[str, Any]) -> Dict[str, Any]:
                 f"features are enabled ({', '.join('features.' + n for n in enabled_ai)}). "
                 f"Use at least 'F64'."
             )
+
+    # --- ingestion-path config sections (Step 28 config-contract completeness) -----------
+    # The Fabric scripts (10/20/30/50/70/80) read these sections; the contract now declares
+    # every key they consume so preflight/validation can no longer pass while a required
+    # runtime field (e.g. a manual OAuth connection id) is missing. Required fields are
+    # placeholder-aware (the committed sample validates green with <PLACEHOLDER> tokens) and
+    # conditional sections only apply when their feature flag is on.
+
+    # mirroring (Variation 1 — always runs; read by 10_create_mirrored_catalog.py). The
+    # databricks_connection_id is the one-time OAuth connection from Step 11 (manual), so it
+    # is required (placeholder until created). The rest are optional resolved-at-runtime hints.
+    mir = require_object(cfg, "mirroring", root)
+    mir_path = f"{root}.mirroring"
+    require_string(mir, "databricks_connection_id", mir_path)
+    for k in ("mode", "databricks_workspace_url", "storage_connection_id", "item_name", "description"):
+        optional_string(mir, k, mir_path)
+    optional_bool(mir, "auto_sync", mir_path)
+    present, schemas = _get(mir, "schemas", mir_path)
+    if present and not isinstance(schemas, list):
+        raise ConfigError(f"{mir_path}.schemas must be a list of schema names")
+
+    # shortcut (Variation 2 — always runs; read by 20_create_shortcut.py). connection_id is
+    # the ADLS shortcut connection (manual consent, Step 12) -> required. The ADLS target must
+    # be given as abfss_path OR (adls_location + adls_subpath).
+    sc = require_object(cfg, "shortcut", root)
+    sc_path = f"{root}.shortcut"
+    require_string(sc, "connection_id", sc_path)
+    abfss = optional_string(sc, "abfss_path", sc_path)
+    adls_loc = optional_string(sc, "adls_location", sc_path)
+    adls_sub = optional_string(sc, "adls_subpath", sc_path)
+    if not abfss and not (adls_loc and adls_sub):
+        raise ConfigError(
+            f"{sc_path} requires the ADLS target as either {sc_path}.abfss_path or both "
+            f"{sc_path}.adls_location + {sc_path}.adls_subpath (Variation-2 path discovery)"
+        )
+    for k in ("lakehouse_id", "lakehouse_name", "name", "path"):
+        optional_string(sc, k, sc_path)
+
+    # lakehouse (target for shortcut + semantic model; read by several scripts).
+    lh = require_object(cfg, "lakehouse", root)
+    lh_path = f"{root}.lakehouse"
+    require_string(lh, "name", lh_path)
+    optional_string(lh, "id", lh_path)
+
+    # semantic_model (Direct Lake; read by 30_create_semantic_model.py).
+    sm = require_object(cfg, "semantic_model", root)
+    sm_path = f"{root}.semantic_model"
+    require_string(sm, "name", sm_path)
+    for k in ("id", "lakehouse_id", "lakehouse_name", "rebind_report",
+              "source_name", "source_type", "thin_gold_schema"):
+        optional_string(sm, k, sm_path)
+
+    # report (read by 50_deploy_report.py).
+    rpt = require_object(cfg, "report", root)
+    rpt_path = f"{root}.report"
+    require_string(rpt, "name", rpt_path)
+    optional_string(rpt, "semantic_model_id", rpt_path)
+
+    # ontology (conditional on enable_ontology; read by 60_create_ontology.py).
+    if enable_ontology:
+        ont = require_object(cfg, "ontology", root)
+        ont_path = f"{root}.ontology"
+        conditional_required(ont, "name", ont_path, when_desc="features.enable_ontology=true")
+        optional_string(ont, "graph_name", ont_path)
+
+    # data_agent (conditional on enable_data_agent; read by 70_create_data_agent.py).
+    if enable_data_agent:
+        da = require_object(cfg, "data_agent", root)
+        da_path = f"{root}.data_agent"
+        conditional_required(da, "name", da_path, when_desc="features.enable_data_agent=true")
+        for k in ("graph_name", "semantic_model_name"):
+            optional_string(da, k, da_path)
+
+    # operations_agent (conditional on enable_operations_agent; read by 80_create_operations_agent.py).
+    if enable_operations_agent:
+        oa = require_object(cfg, "operations_agent", root)
+        oa_path = f"{root}.operations_agent"
+        conditional_required(oa, "agent_name", oa_path, when_desc="features.enable_operations_agent=true")
+        conditional_required(
+            oa, "message_recipient_upn", oa_path, when_desc="features.enable_operations_agent=true"
+        )
+        optional_bool(oa, "should_run", oa_path)
+        for k in ("action_pipeline_id", "action_pipeline_name", "definition_part_path"):
+            optional_string(oa, k, oa_path)
 
     # --- realtime (conditional on eventhouse) ---
     if enable_eventhouse:
@@ -607,14 +719,15 @@ def cmd_selftest() -> int:
 
 def main(argv: List[str]) -> int:
     parser = argparse.ArgumentParser(description="Zava demo config schema validator (fail-fast).")
-    group = parser.add_mutually_exclusive_group(required=True)
+    group = parser.add_mutually_exclusive_group(required=False)
     group.add_argument("--validate", nargs="+", metavar="FILE", help="validate one or more config files")
     group.add_argument("--selftest", action="store_true", help="run built-in positive/negative cases")
     args = parser.parse_args(argv)
 
-    if args.selftest:
-        return cmd_selftest()
-    return cmd_validate(args.validate)
+    if args.validate:
+        return cmd_validate(args.validate)
+    # Default (no args) and --selftest both run the built-in self-test.
+    return cmd_selftest()
 
 
 if __name__ == "__main__":

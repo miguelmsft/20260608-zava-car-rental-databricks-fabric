@@ -21,7 +21,7 @@ Variation-2 phase. A separate **validation checklist** is maintained at the end 
 
 ### Prerequisites
 
-1. Tooling: `az` CLI, `databricks` CLI, Python 3.10+, and the demo Python deps
+1. Tooling: `az` CLI, `databricks` CLI, Python 3.11+ (`<3.13`), and the demo Python deps
    (`pip install -r data/requirements.txt`; Fabric scripts use `DefaultAzureCredential`).
    See [`prerequisites.md`](./prerequisites.md) for the full list.
 2. Sign in to the **MCAPS** subscription (repo-convention identity):

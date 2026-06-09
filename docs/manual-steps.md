@@ -130,7 +130,25 @@ Every row in the consolidated table below uses these columns:
 
 > The Step 12 ADLS network hardening (firewall default‑deny, resource‑instance rule bound to the
 > Workspace Identity, disable public access) is **applied as code** via `network-hardening.bicep`
-> using the object id captured in row 25 — not a manual click.
+> — not a manual click. `scripts/deploy.py` runs the second Bicep pass passing **both**
+> `fabricWorkspaceId` (the workspace GUID persisted into `workspace.workspace_id`, row 25) **and**
+> `workspaceIdentityObjectId` (the identity object id persisted into `workspace.identity_object_id`,
+> row 25). `fabric/scripts/00_create_workspace.py --write-config` persists both ids automatically;
+> the orchestrator **fails fast** if either is still a `<PLACEHOLDER>` so the shortcut is never
+> deployed against an open (default‑Allow) firewall.
+
+### 3.4 BYO Databricks — secure the Variation‑2 shortcut storage (existing‑estate path)
+
+> **Secured V2 hardening is fresh‑Databricks only.** When you bring your own Databricks workspace
+> (`databricks_config.workspace.use_existing=true`), `infra/main.bicep` does **not** own the ADLS
+> Gen2 account, so the hardening module is **explicitly skipped** (surfaced via the
+> `networkHardeningSkippedForExistingDatabricks` Bicep output and logged by `deploy.py` as the
+> `hardening_skipped` wave — never a silent no‑op). Apply the equivalent firewall lockdown on your
+> own storage account manually or with your own IaC:
+
+| # | Step | Action | Where (exact portal path) | Why | Who/role |
+|---|---|---|---|---|---|
+| 29a | 12 | On your existing UC managed‑storage account, set the firewall to **default‑deny** and add a **resource‑instance rule** for the trusted Fabric workspace (resourceId built with the fixed subscription `00000000-0000-0000-0000-000000000000`), then grant the **Workspace Identity** *Storage Blob Data Reader* | Storage account → **Networking** → *Enabled from selected virtual networks and IP addresses* → **Resource instances** (Microsoft.Fabric/workspaces) + Storage account → **Access control (IAM)** → add role assignment | The fresh‑path `network-hardening.bicep` cannot PATCH an account it did not create; replicate its default‑deny + trusted‑workspace rule + Workspace‑Identity RBAC so the BYO shortcut is equally secured (R10 §6.2–6.3) | Storage/Subscription Admin |
 
 ---
 

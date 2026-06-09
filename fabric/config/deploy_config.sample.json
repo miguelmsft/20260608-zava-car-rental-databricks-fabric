@@ -11,10 +11,11 @@
   },
 
   "workspace": {
-    "_comment": "Fresh path creates the workspace + Workspace Identity (Step 10). Existing path attaches to existing_workspace_id. identity_object_id is a placeholder until Workspace Identity is created in Step 10.",
+    "_comment": "Fresh path creates the workspace + Workspace Identity (Step 10). Existing path attaches to existing_workspace_id. identity_object_id + workspace_id are placeholders until Workspace Identity is created in Step 10; 00_create_workspace.py --write-config persists the resolved workspace GUID into workspace_id and the identity object id into identity_object_id (consumed by the Step-28 ADLS hardening wave).",
     "name": "zava-fabric-ws",
     "use_existing": false,
     "existing_workspace_id": "<WORKSPACE_GUID>",
+    "workspace_id": "<WORKSPACE_GUID>",
     "identity_object_id": "<WORKSPACE_IDENTITY_GUID>",
     "_comment_step10": "Fields below are read by fabric/scripts/00_create_workspace.py (Step 10). description: workspace description on create. capacity_ref: which Fabric capacity (by display name) to bind; defaults to capacity.name above. enable_workspace_identity: toggle Workspace Identity provisioning (default true). admin_object_id: optional deploy-SP object id to add as workspace Admin (placeholder; az ad sp show --id <app-id> --query id).",
     "description": "Zava car-rental demo workspace",
@@ -24,12 +25,85 @@
   },
 
   "source": {
+    "_comment": "databricks_catalog MUST equal the selected Databricks Asset Bundle target's catalog (databricks/bundle/databricks.yml). The default dev/prod targets both build 'zava'; scripts/deploy.py fails fast if they diverge (Step 28 catalog coherence).",
     "databricks_catalog": "zava",
-    "gold_schema": "gold"
+    "gold_schema": "gold",
+    "databricks_workspace_url": "<DATABRICKS_WORKSPACE_URL>"
   },
 
   "ingestion": {
     "variation": "2A"
+  },
+
+  "mirroring": {
+    "_comment": "Variation 1 — Mirrored Azure Databricks Catalog (read by 10_create_mirrored_catalog.py). databricks_connection_id is the one-time OAuth connection created manually in Step 11 (placeholder until created). schemas defaults to [gold_schema] when omitted.",
+    "databricks_connection_id": "<DATABRICKS_CONNECTION_ID>",
+    "mode": "ReadOnly",
+    "databricks_workspace_url": "<DATABRICKS_WORKSPACE_URL>",
+    "storage_connection_id": "<ONELAKE_STORAGE_CONNECTION_ID>",
+    "item_name": "zava-mirrored-databricks",
+    "description": "Mirrored Azure Databricks Unity Catalog (certified gold)",
+    "auto_sync": true,
+    "schemas": ["gold"]
+  },
+
+  "shortcut": {
+    "_comment": "Variation 2 — secured OneLake shortcut (read by 20_create_shortcut.py). connection_id is the ADLS Gen2 shortcut connection (manual consent, Step 12). Provide the ADLS target as abfss_path OR adls_location + adls_subpath (discover via the runbook PATH DISCOVERY procedure).",
+    "connection_id": "<ADLS_SHORTCUT_CONNECTION_ID>",
+    "abfss_path": "<ABFSS_MANAGED_STORAGE_PATH>",
+    "adls_location": "<ADLS_DFS_ENDPOINT_URL>",
+    "adls_subpath": "<ADLS_CURATED_SUBPATH>",
+    "lakehouse_id": "<LAKEHOUSE_GUID>",
+    "lakehouse_name": "zava-lakehouse",
+    "name": "rentals_curated",
+    "path": "Files/curated"
+  },
+
+  "lakehouse": {
+    "_comment": "Fabric Lakehouse that hosts the shortcut + thin gold + Direct Lake model.",
+    "name": "zava-lakehouse",
+    "id": "<LAKEHOUSE_GUID>"
+  },
+
+  "semantic_model": {
+    "_comment": "Direct Lake semantic model (read by 30_create_semantic_model.py).",
+    "name": "Zava Fleet Analytics",
+    "id": "<SEMANTIC_MODEL_GUID>",
+    "lakehouse_id": "<LAKEHOUSE_GUID>",
+    "lakehouse_name": "zava-lakehouse",
+    "rebind_report": "true",
+    "source_name": "zava-lakehouse",
+    "source_type": "Lakehouse",
+    "thin_gold_schema": "gold"
+  },
+
+  "report": {
+    "_comment": "Power BI report deploy + rebind (read by 50_deploy_report.py).",
+    "name": "Zava Fleet Dashboard",
+    "semantic_model_id": "<SEMANTIC_MODEL_GUID>"
+  },
+
+  "ontology": {
+    "_comment": "Required when features.enable_ontology=true (read by 60_create_ontology.py).",
+    "name": "Zava Fleet Ontology",
+    "graph_name": "Zava Fleet Graph"
+  },
+
+  "data_agent": {
+    "_comment": "Required when features.enable_data_agent=true (read by 70_create_data_agent.py).",
+    "name": "Zava Fleet Data Agent",
+    "graph_name": "Zava Fleet Graph",
+    "semantic_model_name": "Zava Fleet Analytics"
+  },
+
+  "operations_agent": {
+    "_comment": "Required when features.enable_operations_agent=true (optional Teams path; read by 80_create_operations_agent.py). message_recipient_upn / action_pipeline_* are placeholders.",
+    "agent_name": "Zava Operations Agent",
+    "message_recipient_upn": "manager@zava.example",
+    "should_run": false,
+    "action_pipeline_id": "<ACTION_PIPELINE_GUID>",
+    "action_pipeline_name": "zava-ops-action-pipeline",
+    "definition_part_path": "definition/operationsAgent.json"
   },
 
   "features": {

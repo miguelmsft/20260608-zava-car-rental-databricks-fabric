@@ -844,6 +844,49 @@ Each step lists **Status**, **Files**, **Depends on**, **Tasks**, **Verification
 
 ---
 
+### Phase 9 — Remediation (Phase 4 E2E codebase review)
+
+> Added 2026-06-08 after the Phase 4 `codebase-reviewer` audit (`agent-reviews/2026-06-08-codebase-review.md`) found cross-cutting integration seams that per-step reviews could not see. Two **serialized** remediation steps (both touch `scripts/deploy.py`, so they cannot run in parallel; Step 28 establishes the deploy/config contract, Step 29 conforms downstream artifacts to it).
+
+#### Step 28: Wiring & config coherence remediation — ✅ Done
+**Status:** ✅ Done
+**Files:** `scripts/deploy.py`, `scripts/config_schema.py`, `fabric/config/deploy_config.sample.json`, `infra/main.bicep`, `infra/modules/network-hardening.bicep`, `fabric/scripts/00_create_workspace.py`, `databricks/bundle/databricks.yml`, `databricks/uc/05_access_policies.sql`, `docs/runbook-end-to-end.md`, `docs/manual-steps.md`, `scripts/test_preflight_checks.py`
+**Depends on:** Steps 1–27
+
+**Tasks:**
+- [ ] **🔴 Hardening wired end-to-end:** `00_create_workspace.py` (Step 10) persists the **workspace GUID** and **Workspace Identity object ID** into the effective config; `deploy.py`'s hardening wave (`_bicep_command(apply_hardening=True)`) passes `fabricWorkspaceId` (+ `fabricWorkspaceResourceId` / tenant as required) and `workspaceIdentityObjectId` to Bicep so `network-hardening.bicep` actually adds the trusted-workspace rule + `defaultAction=Deny` + Workspace-Identity RBAC. **Fail fast** if either ID is missing when the V2 shortcut/hardening path is enabled.
+- [ ] **🔴 Catalog default coherence:** align the Databricks catalog across `deploy.py` (`--databricks-target` default), `databricks.yml` (`dev`/`prod` `catalog` var), `fabric/config/deploy_config.sample.json` (`source.databricks_catalog`), docs, and governance so a vanilla end-to-end deploy uses **one** catalog name everywhere (prefer threading the resolved DAB-target catalog into the effective Fabric config as the single source of truth).
+- [ ] **🟡 UC access policies automated:** add a DAB SQL job/task (e.g. `zava_access_policies`) that runs `databricks/uc/05_access_policies.sql` (params: `catalog`, `curated_schema`, `gold_schema`) **after** Lakeflow and **before** Policy Weaver; have `deploy.py` sequence/pause for it so Policy Weaver always syncs real UC row-filters/column-masks.
+- [ ] **🟡 Config contract completeness:** extend `config_schema.py` + `deploy_config.sample.json` to cover every section the scripts read (`mirroring`, `shortcut`, `lakehouse`, `semantic_model`, `report`, `ontology`, `data_agent`, `operations_agent`), marking required/conditional fields + placeholders — at minimum `mirroring.databricks_connection_id`, `shortcut.connection_id`, and `shortcut.abfss_path`/`adls_location`+`adls_subpath`.
+- [ ] **🟡 Existing-Databricks hardening:** either support hardening an existing ADLS account via explicit storage-account/RG params (remove the blanket `&& !useExistingDatabricks` skip), or clearly document that secured V2 hardening is fresh-path-only and provide a BYO manual/IaC procedure.
+- [ ] **🟢 Docs:** update Python version mention to ≥3.11 (`docs/runbook-end-to-end.md`) to match the §7 contract; correct the `docs/manual-steps.md` hardening note to match how `deploy.py` now passes `workspace.identity_object_id`.
+
+**Verification:**
+- [ ] `python scripts/config_schema.py` self-tests pass; `python scripts/test_preflight_checks.py` passes with **new** tests: (a) selected DAB-target catalog == `deploy_config.source.databricks_catalog`; (b) every script-read config key is declared in schema/sample; (c) the hardening Bicep command includes workspace GUID + identity object ID; (d) `05_access_policies.sql` is reachable from the deploy plan.
+- [ ] `az bicep build --file infra/main.bicep --stdout` still compiles (delete the `infra/main.json` artifact after).
+- [ ] `python scripts/deploy.py --dry-run` prints a coherent plan with the access-policy step before governance and the hardening wave passing the IDs.
+
+**Manual steps:** none (beyond those already in `docs/manual-steps.md`).
+
+#### Step 29: V2 downstream visibility & thin-gold execution — 🔄 In progress
+**Status:** 🔄 In progress
+**Files:** `fabric/scripts/40_build_thin_gold.py`, `fabric/semantic-model/definition/model.tmdl`, `fabric/report/` (forecast + a V2-derived visual)
+**Depends on:** Step 28
+
+**Tasks:**
+- [ ] **🟡 Surface Variation 2 downstream:** add at least one V2-derived thin-gold table (from the Lakeflow/shortcut `rentals_curated` / `telematics_curated` curated outputs — e.g. a telematics-freshness or curated-rentals KPI), model it in the semantic model, and add a report visual so the demo **demonstrably** shows V2 shortcut data (not just V1 gold) in the report.
+- [ ] **🟡 Thin-gold executable as a Fabric item:** make Step 13 runnable — deploy `40_build_thin_gold.py` as a Fabric **Notebook item** and run it by item ID/name with explicit parameters (lakehouse, catalog/schema from Step 28's config), conforming to the `deploy.py` Step-13 invocation contract established in Step 28. (Coordinate with Step 28 on how `deploy.py` invokes it — Step 28 owns the `deploy.py` edit; this step makes the notebook deployable/parameterized to match.)
+- [ ] **🟢 Forecast visual backing:** add `agg_revenue_by_site_month` to the semantic model (TMDL) and bind the revenue-forecast visual to a true monthly revenue series (fix the current mismatched axis/value).
+
+**Verification:**
+- [ ] Semantic model TMDL includes the V2-derived table(s) + `agg_revenue_by_site_month`; report references them (no orphan aggregates).
+- [ ] JSON/TMDL artifacts parse; report visual bindings resolve to model fields.
+- [ ] `python scripts/deploy.py --dry-run` Step-13 wave references a deployable Fabric notebook item (not a bare local path) with parameters.
+
+**Manual steps:** none.
+
+---
+
 ## 6. Dependency Graph / Wave Grouping (parallelization)
 
 ```

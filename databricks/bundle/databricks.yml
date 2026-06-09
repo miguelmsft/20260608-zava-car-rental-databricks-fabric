@@ -83,7 +83,14 @@ targets:
     workspace:
       host: https://adb-<dev-workspace-id>.<n>.azuredatabricks.net
     variables:
-      catalog: "zava_dev"
+      # CATALOG COHERENCE (Step 28): the DAB-built catalog MUST equal the Fabric
+      # deploy_config.source.databricks_catalog so a vanilla end-to-end deploy mirrors/reads
+      # exactly what the bundle builds. The Fabric default is "zava" (deploy_config.sample.json),
+      # so the default `dev` target also builds "zava" — one catalog name flows everywhere.
+      # `scripts/deploy.py` fails fast if a selected target's catalog diverges from
+      # source.databricks_catalog. If you override this per-environment, update the Fabric
+      # config's source.databricks_catalog to match (or pass --databricks-target accordingly).
+      catalog: "zava"
 
   prod:
     mode: production
@@ -200,6 +207,31 @@ resources:
               gold_schema: ${var.gold_schema}
             file:
               path: ../uc/04_certify_gold.sql
+
+    # -------------------------------------------------------------------------------
+    # 4) Apply UC ACCESS POLICIES (Step 28 remediation): row filter + column mask that
+    #    Policy Weaver (Step 21) later syncs into Fabric OneLake Security. Runs ../uc/
+    #    05_access_policies.sql as a SQL task, parameterized with catalog/curated/gold
+    #    schemas. SEQUENCING: run this AFTER the Lakeflow curated pipeline
+    #    (zava_lakeflow_curated) so curated.rentals_curated exists, and BEFORE Policy
+    #    Weaver runs (governance wave) — scripts/deploy.py sequences it accordingly so
+    #    Policy Weaver always syncs REAL UC row-filters/column-masks, never an empty source.
+    #    NOTE: 05_access_policies.sql carries account-group placeholders (zava_seattle_mgr,
+    #    zava_pii_authorized, ...) — replace them with real account groups (Step 2) before
+    #    running, exactly like 03_grants_mirroring.sql / 04_certify_gold.sql.
+    # -------------------------------------------------------------------------------
+    zava_access_policies:
+      name: "zava-access-policies-${bundle.target}"
+      tasks:
+        - task_key: access_policies
+          sql_task:
+            warehouse_id: ${var.warehouse_id}
+            parameters:
+              catalog: ${var.catalog}
+              curated_schema: ${var.curated_schema}
+              gold_schema: ${var.gold_schema}
+            file:
+              path: ../uc/05_access_policies.sql
 
   # ---------------------------------------------------------------------------------
   # Lakeflow Spark Declarative Pipeline (Step 9) — Variation-2 SOURCE.
