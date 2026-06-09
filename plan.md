@@ -821,8 +821,8 @@ Each step lists **Status**, **Files**, **Depends on**, **Tasks**, **Verification
 
 **Manual steps:** N/A (this is the catalog of them).
 
-#### Step 27: END-TO-END VALIDATION — ⬜ Not started
-**Status:** ⬜ Not started
+#### Step 27: END-TO-END VALIDATION — ✅ Done
+**Status:** ✅ Done
 **Files:** `docs/runbook-end-to-end.md` (validation checklist section)
 **Depends on:** Steps 1–26
 

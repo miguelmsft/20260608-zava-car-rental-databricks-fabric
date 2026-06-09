@@ -263,3 +263,245 @@ Fabric-side controls. **2B** costs an extra write step (sink/job, append-only se
 yields a stable path and a cleaner governance boundary. Either way, UC policies do **not**
 follow the data through a direct-storage shortcut — Fabric/OneLake security is the enforcement
 layer for Variation 2.
+
+---
+
+## END-TO-END VALIDATION CHECKLIST
+
+> **Purpose.** A presenter (or an automated live-tester, in the later deployment phase) follows
+> this to **prove the whole pipeline works end-to-end** against the deployed demo in **East US 2**.
+> Tick each `- [ ]` as you confirm the **observable success signal**. This checklist does **not**
+> deploy anything — run the *END-TO-END RUN PROCEDURE* above first, then validate here.
+>
+> **Manual UI steps are not duplicated** — where a check requires a portal click, it points to the
+> numbered entry in [`docs/manual-steps.md`](./manual-steps.md).
+>
+> **Region:** all checks assume the workspace/capacity are in **East US 2**. The **only** path that
+> carries an East-US region exclusion is the OPTIONAL Operations Agent (Teams) — see
+> [`architecture.md`](./architecture.md) §8.
+
+### How to use this checklist
+
+- **Default (Teams-free) demo:** complete sections **A, B, C, E, F, G, H** and the default rows in
+  **I**. You can skip every item tagged *(OPTIONAL — Teams)*.
+- **Full demo (Teams available):** also complete section **D** and the optional rows in **I**, which
+  require `features.enable_operations_agent=true` in `fabric/config/deploy_config.json`.
+- **Feature gates** (in `fabric/config/deploy_config.json` → `features`): `enable_ontology`,
+  `enable_data_agent`, `enable_eventhouse`, `enable_activator_email` (all **default true**) and
+  `enable_operations_agent` (**default false**). Ontology is the **only preview** item; everything
+  else is GA (drives the section **G** fallback).
+
+---
+
+### A. Full happy path (ordered) — each stage: command/script → observable success signal
+
+Run these in order. The command column references **real repo scripts/notebooks**; the signal is
+what you must see before ticking the box.
+
+- [ ] **A0 — Synthetic data.** `python data/generate_zava_data.py --out ./data/output` then
+  `python data/generate_telematics_stream.py --batch-dir ./data/output --count 200 --inject-spike --out ./data/output/telematics_stream.ndjson`.
+  **Signal:** 9 FK-consistent entity files (CSV + Parquet) under `./data/output`, and the generator
+  prints `[telematics] spike window: events [...] ... elevated events=N`.
+- [ ] **A1 — Databricks medallion (raw→bronze→silver→gold certified).** From `databricks/bundle/`:
+  `databricks bundle run zava_uc_setup` → `databricks bundle run zava_medallion_pipeline` →
+  `databricks bundle run zava_certify_gold`.
+  **Signal:** the `00 → 10 → 20 → 30` notebook chain succeeds; the certified gold table exists in UC
+  with the certification tag/comment/owner set by `databricks/uc/04_certify_gold.sql`.
+- [ ] **A2 — Lakeflow curated pipeline (Variation-2 source).** `databricks bundle run zava_lakeflow_curated`.
+  **Signal:** `<catalog>.curated.rentals_curated` (materialized view) and
+  `<catalog>.curated.telematics_curated` (streaming table) are populated.
+- [ ] **A3 — UC access policies applied.** As the table OWNER, run `databricks/uc/05_access_policies.sql`
+  (row filter + column mask). **Signal:** `SET ROW FILTER` / `SET MASK` succeed; querying as a
+  non-`zava_seattle_mgr` / non-`zava_pii_authorized` principal shows filtered rows + masked email.
+- [ ] **A4 — Fabric workspace + Workspace Identity.** `python fabric/scripts/00_create_workspace.py`.
+  **Signal:** workspace bound to the F64 capacity exists; Workspace Identity present (confirm via
+  [`manual-steps.md`](./manual-steps.md) #3.1 if reviewing in UI).
+- [ ] **A5 — Ingestion V1 (mirror certified gold).** `python fabric/scripts/10_create_mirrored_catalog.py`.
+  **Signal:** a Mirrored Azure Databricks Catalog item appears in OneLake and the gold tables show
+  rows (UI confirm: [`manual-steps.md`](./manual-steps.md) #3.2).
+- [ ] **A6 — Ingestion V2 (OneLake shortcut to curated storage).**
+  `python fabric/scripts/20_create_shortcut.py` (use the `abfss://` path from the
+  *Managed-storage PATH DISCOVERY* sub-procedure above).
+  **Signal:** a OneLake shortcut to the curated table directory exists and previews curated rows
+  (UI confirm: [`manual-steps.md`](./manual-steps.md) #3.3).
+- [ ] **A7 — Thin gold / aggregations.** `python fabric/scripts/40_build_thin_gold.py`.
+  **Signal:** the `agg_*` consumption tables (e.g. `agg_revenue_by_site`,
+  `agg_fleet_utilization_by_site_month`, `agg_idle_vehicles_by_site`) are built in the Lakehouse.
+- [ ] **A8 — Direct Lake semantic model.** `python fabric/scripts/30_create_semantic_model.py`.
+  **Signal:** the **Zava Fleet Analytics** semantic model deploys in **Direct Lake** mode with
+  measures (`Site Revenue`, `Fleet Utilization %`, `Idle Vehicle Count`) and the `CityManager` RLS
+  role + OLS email/phone masking applied.
+- [ ] **A9 — Power BI report.** `python fabric/scripts/50_deploy_report.py`.
+  **Signal:** the **Zava Fleet Dashboard** renders the multi-city map, decomposition tree, and
+  revenue forecast over the Direct Lake model (report author step: [`manual-steps.md`](./manual-steps.md) #30).
+- [ ] **A10 — Ontology + graph.** `python fabric/scripts/60_create_ontology.py` *(requires
+  `enable_ontology=true`)*. **Signal:** the Ontology item + Graph are generated from the semantic
+  model (UI generation: [`manual-steps.md`](./manual-steps.md) #31; the item definition is
+  `fabric/ontology/ontology_definition.json`).
+- [ ] **A11 — Data Agent.** `python fabric/scripts/70_create_data_agent.py` *(requires
+  `enable_data_agent=true`)*. **Signal:** a Data Agent with the semantic-model **and** graph data
+  sources answers a natural-language question (attach source if needed: [`manual-steps.md`](./manual-steps.md) #32).
+- [ ] **A12 — Eventhouse + KQL + Eventstream.** `python fabric/scripts/75_create_eventhouse.py`
+  *(requires `enable_eventhouse=true`)*. **Signal:** Eventhouse + `zava_rt` KQL DB + `Telematics`
+  table created (DDL from `fabric/realtime/eventhouse_setup.kql`) and an Eventstream (from
+  `fabric/realtime/eventstream_definition.json`) with a `CustomEndpoint` source exists. Wire the
+  source credential per [`manual-steps.md`](./manual-steps.md) #33.
+- [ ] **A13 — Activator EMAIL alert (DEFAULT, Teams-free).**
+  `python fabric/scripts/78_create_activator_email.py` *(requires `enable_activator_email=true`)*.
+  **Signal:** a Reflex item (definition `fabric/activator/reflex_entities.json`) deploys with an
+  `EmailMessage` action targeting `alerting.site_manager_email`; the `idle_minutes > 120` rule is
+  valid in design mode ([`manual-steps.md`](./manual-steps.md) #34). **No Teams involved.**
+- [ ] **A14 — Operations Agent (OPTIONAL — Teams).**
+  `python fabric/scripts/80_create_operations_agent.py` *(only when `enable_operations_agent=true`;
+  user-token create + Teams app per [`manual-steps.md`](./manual-steps.md) #35–#36)*.
+  **Signal:** Operations Agent (config `fabric/operations-agent/Configurations.json`) created.
+  *Skip entirely on the default path.*
+- [ ] **A15 — Policy Weaver.** `python scripts/governance/policy-weaver/run_policy_weaver.py`
+  (config `scripts/governance/policy-weaver/policy_weaver_config.yaml`).
+  **Signal:** the UC row filter + column mask are synced into OneLake Security data-access roles for
+  the **mirrored (V1)** data (role review: [`manual-steps.md`](./manual-steps.md) #37).
+- [ ] **A16 — Purview.** `python scripts/governance/purview/setup_purview_scans.py`.
+  **Signal:** Databricks + Fabric are cataloged with lineage/classification (UI: domains/data
+  product/live-view/labels per [`manual-steps.md`](./manual-steps.md) #38–#40; see
+  `scripts/governance/purview/lineage_runbook.md`).
+
+---
+
+### B. Happy-path consistency check (one business question, three surfaces)
+
+**Business question:** *"Which Zava sites have the most idle vehicles right now?"* The **same ranked
+numbers** must appear in all three surfaces below.
+
+- [ ] **B1 — Power BI measure.** In the **Zava Fleet Dashboard**, read the **`Idle Vehicle Count`**
+  measure (table `agg_idle_vehicles_by_site`) broken down by site. **Record** the top site and its
+  count.
+- [ ] **B2 — Data Agent.** Ask the Data Agent *"Which sites have the most idle vehicles?"*.
+  **Signal:** the returned ranking + counts **match B1** (this is the seeded few-shot
+  `fabric/data-agent/.../graph-ZavaFleetOntologyGraph/fewshots.json`).
+- [ ] **B3 — Ontology / graph query.** Run the graph query
+  `MATCH (v:Vehicle)-[:located_at]->(s:RentalSite) WHERE v.Status = 'idle' RETURN s.SiteName, COUNT(v) AS IdleVehicles ORDER BY IdleVehicles DESC`
+  against the Graph. **Signal:** the top site + count **match B1 and B2** — three surfaces, one
+  number. ✅ tick only if all three agree.
+
+> If `enable_ontology=false`, B3 is unavailable — see section **G** for the GA-only fallback (B1 + B2
+> still match).
+
+---
+
+### C. Real-time watch+act — DEFAULT (Teams-free email)
+
+- [ ] **C1 — Inject the telematics spike.** Generate an idle spike and push it to the Eventstream
+  custom endpoint:
+  `python data/generate_telematics_stream.py --batch-dir ./data/output --count 200 --inject-spike --spike-type idle --out ./data/output/telematics_stream.ndjson`,
+  then replay the NDJSON into the Eventstream `CustomEndpoint` (connection string copied in the UI —
+  [`manual-steps.md`](./manual-steps.md) #33; the endpoint is never committed). **Signal:** rows with
+  `is_spike: true` and `idle_minutes > 120` land in the `Telematics` KQL table.
+- [ ] **C2 — Activator email fires.** **Signal:** an **email** arrives at
+  `alerting.site_manager_email` (the site manager) for the idle-vehicle condition. **Confirm NO
+  Microsoft Teams message, card, or channel is involved** — the action is a first-class
+  `EmailMessage` only.
+
+---
+
+### D. Real-time watch+act — OPTIONAL (Teams) — *only if `enable_operations_agent=true`*
+
+- [ ] **D1 — (OPTIONAL — Teams) Same spike → Operations Agent recommendation.** With the Operations
+  Agent deployed (A14) and the Teams app installed ([`manual-steps.md`](./manual-steps.md) #36),
+  re-run the C1 spike. **Signal:** a **Microsoft Teams** recommendation/approval **card** appears for
+  the site manager with a Yes/No human-in-the-loop action. *Skip on the default path.*
+
+---
+
+### E. Governance — constrained user sees identical restrictions in 3 places
+
+**Test user setup:** add the constrained test user to the **`zava_seattle_mgr`** group **only** (and
+**not** to `zava_pii_authorized`) — the same account groups consumed by
+`databricks/uc/05_access_policies.sql` and woven by Policy Weaver (A15). The user must see **only
+Seattle rentals** with **email masked** in every surface below.
+
+- [ ] **E1 — Direct Lake report.** Signed in as the constrained user, the **Zava Fleet Dashboard**
+  shows **only Seattle** rows (CityManager RLS) with **email masked** (OLS). 
+- [ ] **E2 — Data Agent.** The same user asks a cross-city question; the Data Agent returns **only
+  Seattle** data with masked PII — identical restriction to E1.
+- [ ] **E3 — OneLake.** Browsing the **mirrored (V1)** Lakehouse data in OneLake as the same user
+  shows **only Seattle** rows with masked email — the OneLake Security roles Policy Weaver produced
+  (review/assign: [`manual-steps.md`](./manual-steps.md) #37). ✅ tick only if E1 = E2 = E3.
+
+> Variation-2 caveat (R10 §5.1): UC policies do **not** follow the direct-storage shortcut —
+> Fabric-side OneLake security + storage RBAC are the enforcement layer there (see the
+> *PATH DISCOVERY* governance caveat above). Validate V2 restriction via the Fabric-side controls.
+
+---
+
+### F. Both ingestion variations surface in the report
+
+- [ ] **F1 — V1 (mirrored gold).** Confirm a report visual / table sourced from the **mirrored
+  certified gold** (A5) renders data.
+- [ ] **F2 — V2 (shortcut streaming/MV).** Confirm a report visual / table sourced from the **OneLake
+  shortcut** over the curated streaming table + materialized view (A6) renders data. ✅ tick when
+  **both** V1 and V2 are visible in the same report.
+
+---
+
+### G. Resilience / GA-only fallback (Ontology — the only preview item — disabled)
+
+Set `features.enable_ontology=false` in `fabric/config/deploy_config.json` (skip A10 and the graph
+data source). The **all-GA** path must still deliver:
+
+- [ ] **G1 — Semantic model + report.** A8 + A9 still build and render (GA Direct Lake).
+- [ ] **G2 — Data Agent.** A11 still answers the business question using the **semantic-model** data
+  source alone (no graph). B1 ↔ B2 numbers still match.
+- [ ] **G3 — Activator email alerting.** A13 + section **C** still deliver the site-manager **email**
+  (GA Eventhouse binding — `reflex_entities.json` binds to the Eventhouse, not the ontology). ✅ tick
+  when report + Data Agent + Activator email all work with Ontology off.
+
+---
+
+### H. Cost hygiene (pause capacity at the end)
+
+- [ ] **H1 — Pause the F64 capacity.** Run `python scripts/pause_capacity.py` (preview first with
+  `python scripts/pause_capacity.py --dry-run`; pass `--subscription`, `--resource-group`,
+  `--capacity` if not auto-resolved). **Signal:** the capacity reports **Paused/Suspended** — billing
+  stops. *Do this the moment the demo ends* (see [`cost.md`](./cost.md)).
+
+---
+
+### I. Manual confirmations (presenter sign-off)
+
+- [ ] **I1 — DEFAULT:** the **Activator email** arrived at the site manager **without any Teams**
+  involvement (re-confirms C2).
+- [ ] **I2 — (OPTIONAL — Teams):** the **Operations Agent Teams card** appeared and the Yes/No
+  approval worked (re-confirms D1). *Skip on default path.*
+- [ ] **I3 — (OPTIONAL — preview):** **ontology generation** produced the expected Graph/entities
+  (re-confirms A10). *Skip when `enable_ontology=false`.*
+
+---
+
+### Timings to capture
+
+Record wall-clock duration for each, for the demo script and capacity-cost estimate:
+
+- [ ] **T1** — Synthetic data generation (A0).
+- [ ] **T2** — Databricks medallion + certify (A1–A3).
+- [ ] **T3** — Fabric ingestion: V1 mirror (A5) **and** V2 shortcut (A6) — time each.
+- [ ] **T4** — Thin gold + semantic model + report (A7–A9).
+- [ ] **T5** — Fabric IQ: ontology + Data Agent (A10–A11).
+- [ ] **T6** — RTI stand-up (A12–A13) and **spike-to-email latency** (C1 → C2).
+- [ ] **T7** — Governance: Policy Weaver + Purview (A15–A16).
+- [ ] **T8** — Total elapsed **Active** capacity time (drives the [`cost.md`](./cost.md) estimate).
+
+### Screenshots to capture for the demo script
+
+Capture these stills (in order) to assemble the screenshot-based demo script:
+
+- [ ] **S1** — Certified gold in OneLake (mirrored, **no ETL**) — the "agility" opener.
+- [ ] **S2** — Zava Fleet Dashboard: multi-city **map**, **decomposition tree**, revenue **forecast**.
+- [ ] **S3** — The B1/B2/B3 trio side-by-side (Power BI measure ↔ Data Agent ↔ graph) showing the
+  **same number**.
+- [ ] **S4** — The **Activator email** in the site manager's inbox (and the design-mode rule),
+  **with no Teams**.
+- [ ] **S5** — *(OPTIONAL — Teams)* the Operations Agent **Teams** recommendation card.
+- [ ] **S6** — Governance: constrained Seattle user seeing only Seattle + masked email in the
+  **report, Data Agent, and OneLake** (E1–E3).
+- [ ] **S7** — Report showing **V1 and V2** data together (F1 + F2).
+- [ ] **S8** — Capacity **Paused** confirmation (H1).
