@@ -1,0 +1,46 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/1.0.0/schema.json",
+  "name": "a1000000000000000000000000000029",
+  "position": { "x": 948, "y": 12, "z": 20, "width": 308, "height": 72, "tabOrder": 40 },
+  "_zavaAuthoringNote": "VARIATION 2 SIGNAL (Step-29): bound to agg_telematics_freshness.[Telematics Vehicles Tracked], which is sourced from the Lakeflow telematics_curated STREAMING TABLE surfaced via the OneLake shortcut (UC-managed, NOT mirrorable). A non-zero value here proves the V2 shortcut data reaches the same Direct Lake model as the V1 mirrored gold — a presenter can point at this badge to demonstrate Variation 2 end-to-end.",
+  "visual": {
+    "visualType": "card",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": { "SourceRef": { "Entity": "agg_telematics_freshness" } },
+                  "Property": "Telematics Vehicles Tracked"
+                }
+              },
+              "queryRef": "agg_telematics_freshness.Telematics Vehicles Tracked",
+              "nativeQueryRef": "Telematics Vehicles Tracked"
+            }
+          ]
+        }
+      }
+    },
+    "objects": {
+      "title": [
+        {
+          "properties": {
+            "show": { "expr": { "Literal": { "Value": "true" } } },
+            "text": { "expr": { "Literal": { "Value": "'V2 · Lakeflow Shortcut: Vehicles Streaming Telemetry'" } } },
+            "fontColor": { "solid": { "color": { "expr": { "Literal": { "Value": "'#0B3D91'" } } } } }
+          }
+        }
+      ],
+      "labels": [
+        {
+          "properties": {
+            "color": { "solid": { "color": { "expr": { "Literal": { "Value": "'#1E88E5'" } } } } }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

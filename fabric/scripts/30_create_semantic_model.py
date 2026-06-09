@@ -133,10 +133,13 @@ TABLES: List[Dict[str, str]] = [
     {"name": "dim_customer", "schema": "gold", "entity": "Customers"},
     {"name": "fact_rental", "schema": "gold", "entity": "Rentals"},
     {"name": "agg_revenue_by_site", "schema": "thin_gold", "entity": "RevenuePerSite"},
+    {"name": "agg_revenue_by_site_month", "schema": "thin_gold", "entity": "RevenueByMonth"},
     {"name": "agg_fleet_utilization_by_site_month", "schema": "thin_gold", "entity": "FleetUtilization"},
     {"name": "agg_idle_vehicles_by_site", "schema": "thin_gold", "entity": "IdleVehicles"},
     {"name": "agg_one_way_flows", "schema": "thin_gold", "entity": "OneWayFlows"},
     {"name": "agg_maintenance_cost_by_site", "schema": "thin_gold", "entity": "Maintenance"},
+    # Variation 2 (Lakeflow streaming-table -> OneLake shortcut) — the demonstrable V2 signal.
+    {"name": "agg_telematics_freshness", "schema": "thin_gold", "entity": "TelematicsV2"},
 ]
 
 # Zava entity relationships (star schema). cross_filtering_behavior uses the VERIFIED value set
@@ -268,6 +271,14 @@ MEASURES: List[Dict[str, str]] = [
         "description": "Revenue per site (thin gold, V-Ordered).",
     },
     {
+        # Backs the report's revenue-forecast visual with a TRUE monthly revenue time series
+        # (Step-29 fix; replaces the prior utilization-axis / revenue-by-site mismatch).
+        "table": "agg_revenue_by_site_month", "name": "Monthly Revenue",
+        "expression": "SUM('agg_revenue_by_site_month'[total_revenue_usd])",
+        "format_string": "\\$#,0;(\\$#,0);\\$#,0", "display_folder": "Revenue",
+        "description": "Revenue per site per month (thin gold, V-Ordered) — forecast time series.",
+    },
+    {
         "table": "agg_fleet_utilization_by_site_month", "name": "Fleet Utilization %",
         "expression": (
             "DIVIDE("
@@ -306,6 +317,25 @@ MEASURES: List[Dict[str, str]] = [
         "format_string": "\\$#,0;(\\$#,0);\\$#,0", "display_folder": "Maintenance",
         "description": "Total maintenance spend (labor + parts) per site.",
     },
+    # --- Variation 2 (Lakeflow streaming-table -> OneLake shortcut) signal measures ---
+    {
+        "table": "agg_telematics_freshness", "name": "Telematics Vehicles Tracked",
+        "expression": "DISTINCTCOUNT('agg_telematics_freshness'[vehicle_id])",
+        "format_string": "#,##0", "display_folder": "Variation 2 (Lakeflow shortcut)",
+        "description": "Vehicles streaming telemetry via the V2 Lakeflow -> OneLake shortcut path.",
+    },
+    {
+        "table": "agg_telematics_freshness", "name": "Avg Telematics Freshness (min)",
+        "expression": "AVERAGE('agg_telematics_freshness'[minutes_since_last_snapshot])",
+        "format_string": "#,##0.0", "display_folder": "Variation 2 (Lakeflow shortcut)",
+        "description": "Average minutes since each vehicle's last V2 telematics snapshot.",
+    },
+    {
+        "table": "agg_telematics_freshness", "name": "Max Telematics Idle (min)",
+        "expression": "MAX('agg_telematics_freshness'[max_idle_minutes])",
+        "format_string": "#,##0.0", "display_folder": "Variation 2 (Lakeflow shortcut)",
+        "description": "Worst observed idle minutes from the V2 telematics stream.",
+    },
 ]
 
 # RLS role + city filter (demo). Members are assigned via the Power BI REST API / XMLA at deploy.
@@ -326,10 +356,13 @@ TABLE_DESCRIPTIONS: Dict[str, str] = {
     "dim_customer": "Renters. email/phone are synthetic PII-like columns for the governance demo.",
     "fact_rental": "One row per rental; carries reservation link, settled revenue, and one-way flag.",
     "agg_revenue_by_site": "Revenue per site (V-Ordered) enriched with site geo for the map.",
+    "agg_revenue_by_site_month": "Revenue per site per month (V-Ordered) — the forecast time series.",
     "agg_fleet_utilization_by_site_month": "Monthly fleet utilization by site (V-Ordered).",
     "agg_idle_vehicles_by_site": "Vehicle status counts by site (idle / rented / maintenance).",
     "agg_one_way_flows": "Pickup->return one-way movement matrix with dual geo for flow lines.",
     "agg_maintenance_cost_by_site": "Maintenance spend (labor + parts) per site (V-Ordered).",
+    "agg_telematics_freshness": "Variation 2: per-vehicle telematics freshness/health from the "
+                                "Lakeflow streaming table via the OneLake shortcut (not mirrorable).",
 }
 
 # Blue Zava branding + AI-prep model annotations (kept in sync with model.tmdl).

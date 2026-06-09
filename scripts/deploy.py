@@ -432,11 +432,19 @@ class Deployer:
                 ))
 
         # Wave 5 — Thin Fabric gold (consumption-layer aggregation notebook).
+        # Step 29: 40_build_thin_gold.py is deployed as a Fabric **Notebook item** and run by
+        # name with parameters (lakehouse / catalog / gold + thin-gold schema) resolved from the
+        # Step-28 coherent config — not invoked as a bare local source path. The script's
+        # `--deploy-and-run` driver emits `fab import` (create/update the item) + `fab job
+        # run-sync` (run the item with `-P` params); `--dry-run` prints those without executing.
         waves.append(Wave(
-            "thin_gold", "Fabric: thin gold / aggregation layer (Step 13)", KIND_NOTEBOOK,
-            command=["fab", "notebook", "run",
-                     os.path.join(FABRIC_SCRIPTS, "40_build_thin_gold.py")],
-            note="Fabric PySpark notebook — run via fabric-cli/REST notebook job against the workspace.",
+            "thin_gold", "Fabric: thin gold / aggregation layer (Step 13)", KIND_FABRIC,
+            command=fab("40_build_thin_gold.py", "--deploy-and-run",
+                        "--notebook-name", "40_build_thin_gold"),
+            retry=True,
+            note="Deploys 40_build_thin_gold.py as a Fabric Notebook ITEM, then runs that item by "
+                 "name with parameters (lakehouse/catalog/gold+thin-gold schema). Offline --dry-run "
+                 "prints the fabric-cli import + job-run commands without executing.",
         ))
 
         # Wave 6 — Direct Lake semantic model.

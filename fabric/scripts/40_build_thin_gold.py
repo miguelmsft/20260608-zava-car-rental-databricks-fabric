@@ -35,6 +35,145 @@
 # MAGIC access come from the Fabric notebook runtime (Workspace Identity / attached Lakehouse).
 
 # CELL ********************
+# MAGIC %md ## Deploy driver (CLI only — NOT executed inside the Fabric notebook runtime)
+# MAGIC When `scripts/deploy.py` (Step-13 thin_gold wave) runs this file as a plain Python script
+# MAGIC with `--deploy-and-run`, it does **not** execute Spark. Instead it imports THIS notebook
+# MAGIC source into the Step-10 Fabric workspace as a **Notebook item** and runs that item *by name*
+# MAGIC with parameters (lakehouse / catalog / gold + thin-gold schema) resolved from
+# MAGIC `deploy_config.json`. `--dry-run` prints the fabric-cli commands without authenticating or
+# MAGIC mutating anything. Inside a Fabric notebook run `sys.argv` carries none of these flags, so
+# MAGIC this block is a no-op and the data cells below run normally.
+
+import os as _os
+import sys as _sys
+
+# Flags that switch this file from "notebook body" to "deploy driver". A Fabric notebook run
+# never passes these on argv (parameters arrive via the toggle-parameter cell), so the guard at
+# the bottom of this cell stays False there and the data cells run unchanged.
+_DRIVER_FLAGS = {"--deploy", "--run", "--deploy-and-run", "--dry-run"}
+
+
+def _thin_gold_deploy_driver(argv):
+    """Deploy THIS notebook source as a Fabric Notebook *item* and run it by name with parameters.
+
+    Resolves the workspace / lakehouse / catalog / schemas from ``deploy_config.json`` (the same
+    Step-28 coherent config every other wave reads), then emits two fabric-cli commands:
+
+      1. ``fab import`` — create/update the Fabric **Notebook item** from this local ``.py`` source.
+      2. ``fab job run-sync`` — run that **item by path/name** with ``-P`` parameters.
+
+    ``--dry-run`` prints the commands (no auth, no mutation) and returns 0 so ``deploy.py
+    --dry-run`` stays offline. The Step-13 wave therefore references a deployable Notebook item
+    (not a bare local path) with explicit parameters.
+    """
+    import argparse
+    import json
+    import subprocess
+
+    parser = argparse.ArgumentParser(
+        prog="40_build_thin_gold.py",
+        description="Deploy + run the Zava thin-gold notebook as a Fabric Notebook item.",
+    )
+    parser.add_argument("--config", help="Path to deploy_config.json (Step-1 schema).")
+    parser.add_argument("--workspace", help="Fabric workspace name (overrides config).")
+    parser.add_argument("--lakehouse", help="Lakehouse holding gold + thin gold (overrides config).")
+    parser.add_argument("--catalog", help="Databricks/source catalog (overrides config).")
+    parser.add_argument("--gold-schema", help="Gold schema name (overrides config).")
+    parser.add_argument("--thin-gold-schema", help="Thin-gold schema name (overrides config).")
+    parser.add_argument("--curated-schema", help="V2 curated (shortcut) schema; default bare-name.")
+    parser.add_argument("--notebook-name", default="40_build_thin_gold",
+                        help="Fabric Notebook item display name to create/run.")
+    parser.add_argument("--deploy-and-run", action="store_true", help="Import the item, then run it.")
+    parser.add_argument("--deploy", action="store_true", help="Import/update the item only.")
+    parser.add_argument("--run", action="store_true", help="Run the existing item only.")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Print the fabric-cli commands without authenticating or mutating.")
+    args, _unknown = parser.parse_known_args(argv)
+
+    cfg = {}
+    if args.config and _os.path.exists(args.config):
+        with open(args.config, "r", encoding="utf-8") as fh:
+            cfg = json.load(fh)
+
+    def _clean(value):
+        return value.strip() if isinstance(value, str) and value.strip() else None
+
+    src_cfg = cfg.get("source", {}) or {}
+    ws_cfg = cfg.get("workspace", {}) or {}
+    sm_cfg = cfg.get("semantic_model", {}) or {}
+    sc_cfg = cfg.get("shortcut", {}) or {}
+    lh_cfg = cfg.get("lakehouse", {}) or {}
+
+    workspace = args.workspace or _clean(ws_cfg.get("name")) or "zava-fabric-ws"
+    catalog_name = args.catalog or _clean(src_cfg.get("databricks_catalog")) or "zava"
+    lakehouse_name = (
+        args.lakehouse
+        or _clean(sm_cfg.get("lakehouse_name"))
+        or _clean(sc_cfg.get("lakehouse_name"))
+        or _clean(lh_cfg.get("name"))
+        or f"{catalog_name}_lakehouse"
+    )
+    gold = args.gold_schema or _clean(src_cfg.get("gold_schema")) or "gold"
+    thin_gold = args.thin_gold_schema or _clean(sm_cfg.get("thin_gold_schema")) or "thin_gold"
+    curated_schema = (
+        args.curated_schema
+        if args.curated_schema is not None
+        else (_clean(sc_cfg.get("curated_schema")) or "")
+    )
+
+    item_path = f"/{workspace}.Workspace/{args.notebook_name}.Notebook"
+    local_src = _os.path.abspath(__file__)
+
+    # Parameters injected into the deployed Notebook item's toggle-parameter cell. `lakehouse`
+    # and `catalog` are passed for cross-check/lineage; the data cells qualify table names by the
+    # schema params (the attached Lakehouse provides OneLake access).
+    nb_params = {
+        "lakehouse": lakehouse_name,
+        "catalog": catalog_name,
+        "source_schema": gold,
+        "target_schema": thin_gold,
+        "source_curated_schema": curated_schema,
+    }
+    param_str = ",".join(f"{k}={v}" for k, v in nb_params.items())
+
+    import_cmd = ["fab", "import", item_path, "-i", local_src, "--format", ".py", "-f"]
+    run_cmd = ["fab", "job", "run-sync", item_path, "-P", param_str]
+
+    do_deploy = args.deploy or args.deploy_and_run or not args.run
+    do_run = args.run or args.deploy_and_run or not args.deploy
+
+    print(f"[thin-gold] workspace={workspace!r} lakehouse={lakehouse_name!r} catalog={catalog_name!r} "
+          f"gold={gold!r} thin_gold={thin_gold!r} curated_schema={curated_schema!r}")
+    print(f"[thin-gold] Fabric Notebook item: {item_path}")
+
+    cmds = []
+    if do_deploy:
+        cmds.append(import_cmd)
+    if do_run:
+        cmds.append(run_cmd)
+
+    if args.dry_run:
+        print("[thin-gold][DRY-RUN] would import + run the Fabric Notebook item with parameters:")
+        for cmd in cmds:
+            print("    " + " ".join(cmd))
+        return 0
+
+    for cmd in cmds:
+        print("[thin-gold] $ " + " ".join(cmd))
+        rc = subprocess.run(cmd, check=False).returncode
+        if rc != 0:
+            print(f"[thin-gold] command failed (rc={rc}): {' '.join(cmd)}")
+            return rc
+    return 0
+
+
+# Divert to the deploy driver ONLY when invoked as a script with a driver flag. In a Fabric
+# notebook run there are no such argv flags, so execution falls through to the data cells.
+if __name__ == "__main__" and any(a.split("=", 1)[0] in _DRIVER_FLAGS for a in _sys.argv[1:]):
+    _sys.exit(_thin_gold_deploy_driver(_sys.argv[1:]))
+
+
+# CELL ********************
 # MAGIC %md ## Parameters (Fabric "Toggle parameter cell")
 # MAGIC Fabric injects pipeline/notebook parameter overrides above the values below. Keep these
 # MAGIC names consistent with the Step-1 config schema and the Step-8 gold table names.
@@ -56,6 +195,20 @@ src_dim_site = "dim_site"
 src_dim_vehicle = "dim_vehicle"
 src_kpi_one_way_flows = "kpi_one_way_flows"
 src_kpi_maintenance_cost = "kpi_maintenance_cost"
+
+# Variation 2 (Lakeflow -> OneLake shortcut) curated source tables. These UC **managed** outputs
+# (a streaming table + a materialized view) CANNOT be mirrored, so they reach Fabric through the
+# Step-12 OneLake shortcut and land under the Lakehouse `Tables/` folder — reachable by bare name
+# by default, or under `source_curated_schema` on a schema-enabled Lakehouse. Reading at least one
+# of them here is what makes the report **demonstrably** show V2 shortcut data, not just V1 gold.
+source_curated_schema = ""                       # "" => curated tables reachable by bare name (shortcut landing)
+src_telematics_curated = "telematics_curated"    # V2 STREAMING TABLE (Lakeflow) — not mirrorable
+src_rentals_curated = "rentals_curated"          # V2 MATERIALIZED VIEW (Lakeflow) — not mirrorable
+
+# Informational parameters passed by scripts/deploy.py for cross-check / lineage. The attached
+# Fabric Lakehouse provides OneLake access; these are NOT used to qualify table names here.
+lakehouse = ""               # Step-10 Lakehouse display name (deploy.py: semantic_model.lakehouse_name)
+catalog = ""                 # Source Databricks catalog (deploy.py: source.databricks_catalog)
 
 # CELL ********************
 # MAGIC %md ## Spark session + V-Order / optimize-write configuration
@@ -114,6 +267,19 @@ def read_source(table: str) -> DataFrame:
     Lakehouse (``gold.fact_rental``) or a named Mirrored Catalog item.
     """
     name = _qualify(source_catalog, source_schema, table)
+    return spark.table(name)
+
+
+def read_curated(table: str) -> DataFrame:
+    """Read a **Variation-2** Lakeflow curated table surfaced via the OneLake shortcut.
+
+    These are UC **managed** outputs (a streaming table / materialized view) that *cannot be
+    mirrored*, so they reach Fabric through the Step-12 shortcut and land under the Lakehouse
+    ``Tables/`` folder — reachable by bare name (``telematics_curated``) by default, or under
+    ``source_curated_schema`` on a schema-enabled Lakehouse. Reading them here is the seam that
+    proves V2 shortcut data flows into the same Direct Lake model as the V1 mirrored gold.
+    """
+    name = _qualify(source_catalog, source_curated_schema, table)
     return spark.table(name)
 
 
@@ -323,6 +489,42 @@ write_thin_gold(agg_maintenance_cost_by_site, "agg_maintenance_cost_by_site")
 
 
 # CELL ********************
+# MAGIC %md
+# MAGIC ## KPI 6 — Telematics freshness / health  (**VARIATION 2** — Lakeflow -> OneLake shortcut)
+# MAGIC **This is the Variation-2 signal surfaced in the report.** It is sourced from the Lakeflow
+# MAGIC `telematics_curated` **streaming table** — a UC-managed object that *cannot be mirrored* —
+# MAGIC reached through the Step-12 OneLake **shortcut**. A non-empty value here proves the V2
+# MAGIC shortcut path feeds the **same** Direct Lake model as the V1 mirrored gold (the plan's "both
+# MAGIC variations feed the same downstream" requirement). Per vehicle we keep the latest snapshot,
+# MAGIC telemetry rollups, and a **freshness lag** (minutes since the last telematics snapshot).
+
+telematics_curated = read_curated(src_telematics_curated)
+
+agg_telematics_freshness = (
+    telematics_curated.groupBy("vehicle_id")
+    .agg(
+        F.count("telematics_id").alias("snapshots"),
+        F.max("snapshot_ts").alias("latest_snapshot_ts"),
+        F.round(F.avg("speed_mph"), 1).alias("avg_speed_mph"),
+        F.round(F.max("idle_minutes"), 1).alias("max_idle_minutes"),
+        F.round(F.max("odometer_miles"), 1).alias("latest_odometer_miles"),
+    )
+    # Freshness = wall-clock now minus the most recent snapshot, in minutes. On synthetic/historical
+    # data this is large but still a genuine, recomputed-on-refresh signal of the V2 stream's recency.
+    .withColumn(
+        "minutes_since_last_snapshot",
+        F.round(
+            (F.unix_timestamp(F.current_timestamp()) - F.unix_timestamp(F.col("latest_snapshot_ts")))
+            / F.lit(60.0),
+            1,
+        ),
+    )
+    .orderBy(F.col("latest_snapshot_ts").desc())
+)
+write_thin_gold(agg_telematics_freshness, "agg_telematics_freshness")
+
+
+# CELL ********************
 # MAGIC %md ## Verify — every thin gold aggregate is present, non-empty, and V-Ordered
 
 _thin_tables = (
@@ -332,6 +534,7 @@ _thin_tables = (
     "agg_idle_vehicles_by_site",
     "agg_one_way_flows",
     "agg_maintenance_cost_by_site",
+    "agg_telematics_freshness",
 )
 for _t in _thin_tables:
     _name = _qualify(target_catalog, target_schema, _t)

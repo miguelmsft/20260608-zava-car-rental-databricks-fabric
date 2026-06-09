@@ -29,4 +29,129 @@ ref table agg_idle_vehicles_by_site
 ref table agg_one_way_flows
 ref table agg_maintenance_cost_by_site
 
+/// Monthly revenue per site (thin gold, V-Ordered) — the TRUE monthly revenue time series that
+/// backs the report's revenue-forecast visual (Step-29 fix; replaces the prior utilization-axis /
+/// revenue-by-site value mismatch). Defined inline here to stay within the Step-29 file scope.
+table agg_revenue_by_site_month
+	lineageTag: 22222222-0000-0000-0000-000000000010
+
+	measure 'Monthly Revenue' = SUM('agg_revenue_by_site_month'[total_revenue_usd])
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: Revenue
+		annotation Zava_KPI = monthly_revenue
+
+	column pickup_site_id
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: pickup_site_id
+
+	column pickup_site_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: pickup_site_name
+
+	column pickup_city
+		dataType: string
+		summarizeBy: none
+		sourceColumn: pickup_city
+		dataCategory: City
+
+	column pickup_state
+		dataType: string
+		summarizeBy: none
+		sourceColumn: pickup_state
+		dataCategory: StateOrProvince
+
+	column revenue_month
+		dataType: dateTime
+		formatString: yyyy-mm
+		summarizeBy: none
+		sourceColumn: revenue_month
+
+	column total_rentals
+		dataType: int64
+		summarizeBy: sum
+		sourceColumn: total_rentals
+
+	column total_revenue_usd
+		dataType: double
+		isHidden
+		summarizeBy: sum
+		sourceColumn: total_revenue_usd
+
+	partition agg_revenue_by_site_month = entity
+		mode: directLake
+		source
+			entityName: agg_revenue_by_site_month
+			schemaName: thin_gold
+			expressionSource: DatabaseQuery
+
+	annotation Zava_Entity = RevenueByMonth
+
+/// Variation-2 telematics freshness / health (thin gold, V-Ordered). Sourced from the Lakeflow
+/// `telematics_curated` STREAMING TABLE surfaced via the OneLake shortcut (UC-managed, NOT
+/// mirrorable) — this is the report's demonstrable V2 signal. Defined inline to stay within the
+/// Step-29 file scope.
+table agg_telematics_freshness
+	lineageTag: 22222222-0000-0000-0000-000000000011
+
+	measure 'Telematics Vehicles Tracked' = DISTINCTCOUNT('agg_telematics_freshness'[vehicle_id])
+		formatString: #,##0
+		displayFolder: Variation 2 (Lakeflow shortcut)
+		annotation Zava_KPI = telematics_vehicles_tracked
+
+	measure 'Avg Telematics Freshness (min)' = AVERAGE('agg_telematics_freshness'[minutes_since_last_snapshot])
+		formatString: #,##0.0
+		displayFolder: Variation 2 (Lakeflow shortcut)
+
+	measure 'Max Telematics Idle (min)' = MAX('agg_telematics_freshness'[max_idle_minutes])
+		formatString: #,##0.0
+		displayFolder: Variation 2 (Lakeflow shortcut)
+
+	column vehicle_id
+		dataType: int64
+		summarizeBy: none
+		sourceColumn: vehicle_id
+
+	column snapshots
+		dataType: int64
+		summarizeBy: sum
+		sourceColumn: snapshots
+
+	column latest_snapshot_ts
+		dataType: dateTime
+		summarizeBy: none
+		sourceColumn: latest_snapshot_ts
+
+	column avg_speed_mph
+		dataType: double
+		summarizeBy: none
+		sourceColumn: avg_speed_mph
+
+	column max_idle_minutes
+		dataType: double
+		summarizeBy: none
+		sourceColumn: max_idle_minutes
+
+	column latest_odometer_miles
+		dataType: double
+		summarizeBy: none
+		sourceColumn: latest_odometer_miles
+
+	column minutes_since_last_snapshot
+		dataType: double
+		isHidden
+		summarizeBy: none
+		sourceColumn: minutes_since_last_snapshot
+
+	partition agg_telematics_freshness = entity
+		mode: directLake
+		source
+			entityName: agg_telematics_freshness
+			schemaName: thin_gold
+			expressionSource: DatabaseQuery
+
+	annotation Zava_Entity = TelematicsV2
+
 ref role CityManager
