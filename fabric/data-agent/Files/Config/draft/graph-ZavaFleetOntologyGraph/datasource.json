@@ -1,0 +1,53 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/dataAgent/definition/dataAgent/2.1.0/schema.json",
+  "artifactId": "__ZAVA_GRAPH_ARTIFACT_ID__",
+  "workspaceId": "__ZAVA_WORKSPACE_ID__",
+  "displayName": "__ZAVA_GRAPH_DISPLAY_NAME__",
+  "type": "graph",
+  "userDescription": "The managed Graph in Microsoft Fabric (GA) that is auto-created with the Zava Fleet Ontology (Step 16). Use for cross-domain, entity-and-relationship questions across vehicles, rental sites, and rentals.",
+  "dataSourceInstructions": "Use this graph (NL2GQL) for questions about how entities relate: vehicles located at sites, idle vehicles per site, and one-way rental flows between a pickup site and a different return site. Prefer GQL MATCH patterns. NOTE (R4): attaching the ontology itself as an 'ontology' (NL2Ontology) data source is currently a UI-only step in some tenants because the Data Agent definition REST enum exposes 'graph' and 'semantic_model' but not 'ontology'. This graph source is the documented programmatic path to ontology-backed reasoning.",
+  "elements": [
+    {
+      "id": "00000000-1600-0001-0001-000000000001",
+      "display_name": "Vehicle",
+      "type": "graph.entity",
+      "is_selected": true,
+      "description": "Vehicle node in the Zava Fleet ontology graph."
+    },
+    {
+      "id": "00000000-1600-0001-0001-000000000002",
+      "display_name": "Site",
+      "type": "graph.entity",
+      "is_selected": true,
+      "description": "Rental site / location node."
+    },
+    {
+      "id": "00000000-1600-0001-0001-000000000003",
+      "display_name": "Rental",
+      "type": "graph.entity",
+      "is_selected": true,
+      "description": "Rental transaction node connecting a vehicle to pickup/return sites."
+    },
+    {
+      "id": "00000000-1600-0002-0001-000000000001",
+      "display_name": "LOCATED_AT",
+      "type": "graph.relationship",
+      "is_selected": true,
+      "description": "Relationship: a Vehicle is located at a Site."
+    },
+    {
+      "id": "00000000-1600-0002-0001-000000000002",
+      "display_name": "PICKED_UP_AT",
+      "type": "graph.relationship",
+      "is_selected": true,
+      "description": "Relationship: a Rental was picked up at a Site."
+    },
+    {
+      "id": "00000000-1600-0002-0001-000000000003",
+      "display_name": "RETURNED_AT",
+      "type": "graph.relationship",
+      "is_selected": true,
+      "description": "Relationship: a Rental was returned at a Site (one-way flows when pickup != return)."
+    }
+  ]
+}

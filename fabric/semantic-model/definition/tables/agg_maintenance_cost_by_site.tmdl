@@ -1,0 +1,99 @@
+/// Maintenance cost by site (thin gold, V-Ordered). Service spend (labor + parts) per site,
+/// geo-enriched so maintenance renders on the same multi-city map as revenue.
+table agg_maintenance_cost_by_site
+	lineageTag: 22222222-0000-0000-0000-000000000009
+
+	measure 'Maintenance Cost' = SUM('agg_maintenance_cost_by_site'[total_maintenance_cost_usd])
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: Maintenance
+		annotation Zava_KPI = maintenance_cost
+
+	measure 'Labor Cost' = SUM('agg_maintenance_cost_by_site'[total_labor_cost_usd])
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: Maintenance
+
+	measure 'Parts Cost' = SUM('agg_maintenance_cost_by_site'[total_parts_cost_usd])
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: Maintenance
+
+	measure 'Maintenance Events' = SUM('agg_maintenance_cost_by_site'[maintenance_events])
+		formatString: #,##0
+		displayFolder: Maintenance
+
+	column site_id
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: site_id
+
+	column site_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: site_name
+
+	column site_city
+		dataType: string
+		summarizeBy: none
+		sourceColumn: site_city
+		dataCategory: City
+
+	column site_state
+		dataType: string
+		summarizeBy: none
+		sourceColumn: site_state
+		dataCategory: StateOrProvince
+
+	column maintenance_events
+		dataType: int64
+		isHidden
+		summarizeBy: sum
+		sourceColumn: maintenance_events
+
+	column total_maintenance_cost_usd
+		dataType: double
+		isHidden
+		summarizeBy: sum
+		sourceColumn: total_maintenance_cost_usd
+
+	column total_labor_cost_usd
+		dataType: double
+		isHidden
+		summarizeBy: sum
+		sourceColumn: total_labor_cost_usd
+
+	column total_parts_cost_usd
+		dataType: double
+		isHidden
+		summarizeBy: sum
+		sourceColumn: total_parts_cost_usd
+
+	column latitude
+		dataType: double
+		summarizeBy: none
+		sourceColumn: latitude
+		dataCategory: Latitude
+
+	column longitude
+		dataType: double
+		summarizeBy: none
+		sourceColumn: longitude
+		dataCategory: Longitude
+
+	column is_hq
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: is_hq
+
+	column parking_capacity
+		dataType: int64
+		summarizeBy: none
+		sourceColumn: parking_capacity
+
+	partition agg_maintenance_cost_by_site = entity
+		mode: directLake
+		source
+			entityName: agg_maintenance_cost_by_site
+			schemaName: thin_gold
+			expressionSource: DatabaseQuery
+
+	annotation Zava_Entity = Maintenance

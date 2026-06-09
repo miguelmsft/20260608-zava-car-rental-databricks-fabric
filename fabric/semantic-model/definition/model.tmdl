@@ -1,0 +1,32 @@
+/// Zava Fleet Analytics — Direct Lake on OneLake semantic model for the Zava car-rental demo.
+/// Blue Zava theme. Binds to the Step-13 thin gold (V-Ordered Delta) aggregates plus the Zava
+/// gold star schema (dim_site, dim_vehicle, dim_customer, fact_rental) in the Step-10 Lakehouse.
+model Model
+	culture: en-US
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	discourageImplicitMeasures
+	sourceQueryCulture: en-US
+
+	annotation __PBI_TimeIntelligenceEnabled = 0
+
+	/// Blue Zava branding metadata — the matching report applies fabric/theme/zava-blue-theme.json.
+	annotation Zava_Brand = blue
+
+	annotation Zava_ThemeFile = fabric/theme/zava-blue-theme.json
+
+	/// "Prep for AI" marker so the Fabric Data Agent (Step 17) treats this model as AI-ready.
+	annotation Zava_AIPrep = enabled
+
+	annotation PBI_ProTooling = ["TMDL","semantic-link-labs"]
+
+ref table dim_site
+ref table dim_vehicle
+ref table dim_customer
+ref table fact_rental
+ref table agg_revenue_by_site
+ref table agg_fleet_utilization_by_site_month
+ref table agg_idle_vehicles_by_site
+ref table agg_one_way_flows
+ref table agg_maintenance_cost_by_site
+
+ref role CityManager

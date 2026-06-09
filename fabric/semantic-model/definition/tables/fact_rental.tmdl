@@ -1,0 +1,194 @@
+/// Rentals — the central Zava fact (one row per rental). Carries the Reservation link
+/// (reservation_id), settled Payments revenue (revenue_usd), and the one-way movement flag.
+/// Hosts the headline cross-entity measures (Revenue, One-Way Rentals, Revenue per Site).
+table fact_rental
+	lineageTag: 22222222-0000-0000-0000-000000000004
+
+	measure 'Total Rentals' = COUNTROWS('fact_rental')
+		formatString: #,##0
+		displayFolder: Volume
+		annotation Zava_KPI = volume
+
+	measure 'Total Revenue' = SUM('fact_rental'[revenue_usd])
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: Revenue
+		annotation Zava_KPI = revenue
+
+	measure 'Revenue per Rental' = DIVIDE([Total Revenue], [Total Rentals])
+		formatString: \$#,0.00;(\$#,0.00);\$#,0.00
+		displayFolder: Revenue
+
+	/// Revenue divided across the active sites in context — the headline "Revenue per Site" KPI.
+	measure 'Revenue per Site' = DIVIDE([Total Revenue], DISTINCTCOUNT('dim_site'[site_id]))
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: Revenue
+		annotation Zava_KPI = revenue_per_site
+
+	measure 'Average Rental Duration' = AVERAGE('fact_rental'[rental_days])
+		formatString: #,##0.0
+		displayFolder: Volume
+
+	measure 'Total Miles Driven' = SUM('fact_rental'[miles_driven])
+		formatString: #,##0
+		displayFolder: Volume
+
+	measure 'Active Vehicles' = DISTINCTCOUNT('fact_rental'[vehicle_id])
+		formatString: #,##0
+		displayFolder: Fleet
+
+	/// One-way rentals — count of rentals returned to a different site than pickup.
+	measure 'One-Way Rentals' = CALCULATE(COUNTROWS('fact_rental'), 'fact_rental'[is_one_way] = TRUE())
+		formatString: #,##0
+		displayFolder: One-Way
+		annotation Zava_KPI = one_way
+
+	measure 'One-Way Rental %' = DIVIDE([One-Way Rentals], [Total Rentals])
+		formatString: 0.0%;-0.0%;0.0%
+		displayFolder: One-Way
+
+	column rental_id
+		dataType: int64
+		isKey
+		isHidden
+		summarizeBy: none
+		sourceColumn: rental_id
+
+	column reservation_id
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: reservation_id
+
+	column customer_id
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: customer_id
+
+	column vehicle_id
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: vehicle_id
+
+	column vehicle_class_id
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: vehicle_class_id
+
+	column class_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: class_name
+
+	column category
+		dataType: string
+		summarizeBy: none
+		sourceColumn: category
+
+	column pickup_site_id
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: pickup_site_id
+
+	column pickup_site_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: pickup_site_name
+
+	column pickup_city
+		dataType: string
+		summarizeBy: none
+		sourceColumn: pickup_city
+		dataCategory: City
+
+	column pickup_state
+		dataType: string
+		summarizeBy: none
+		sourceColumn: pickup_state
+		dataCategory: StateOrProvince
+
+	column return_site_id
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: return_site_id
+
+	column return_site_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: return_site_name
+
+	column return_city
+		dataType: string
+		summarizeBy: none
+		sourceColumn: return_city
+		dataCategory: City
+
+	column pickup_ts
+		dataType: dateTime
+		formatString: General Date
+		summarizeBy: none
+		sourceColumn: pickup_ts
+
+	column return_ts
+		dataType: dateTime
+		formatString: General Date
+		summarizeBy: none
+		sourceColumn: return_ts
+
+	column rental_days
+		dataType: int64
+		summarizeBy: sum
+		sourceColumn: rental_days
+
+	column miles_driven
+		dataType: double
+		summarizeBy: sum
+		sourceColumn: miles_driven
+
+	column is_one_way
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: is_one_way
+
+	column status
+		dataType: string
+		summarizeBy: none
+		sourceColumn: status
+
+	column revenue_usd
+		dataType: double
+		isHidden
+		formatString: \$#,0.00;(\$#,0.00);\$#,0.00
+		summarizeBy: sum
+		sourceColumn: revenue_usd
+
+	column base_amount_usd
+		dataType: double
+		isHidden
+		summarizeBy: sum
+		sourceColumn: base_amount_usd
+
+	column one_way_fee_usd
+		dataType: double
+		isHidden
+		summarizeBy: sum
+		sourceColumn: one_way_fee_usd
+
+	column taxes_fees_usd
+		dataType: double
+		isHidden
+		summarizeBy: sum
+		sourceColumn: taxes_fees_usd
+
+	partition fact_rental = entity
+		mode: directLake
+		source
+			entityName: fact_rental
+			schemaName: gold
+			expressionSource: DatabaseQuery
+
+	annotation Zava_Entity = Rentals

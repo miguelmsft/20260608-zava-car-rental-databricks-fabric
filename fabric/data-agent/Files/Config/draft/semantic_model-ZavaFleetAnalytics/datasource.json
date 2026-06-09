@@ -1,0 +1,108 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/dataAgent/definition/dataAgent/2.1.0/schema.json",
+  "artifactId": "__ZAVA_SEMANTIC_MODEL_ARTIFACT_ID__",
+  "workspaceId": "__ZAVA_WORKSPACE_ID__",
+  "displayName": "__ZAVA_SEMANTIC_MODEL_DISPLAY_NAME__",
+  "type": "semantic_model",
+  "userDescription": "Zava Fleet Analytics Direct Lake semantic model over the mirrored Databricks Unity Catalog gold data (Step 14). Use for revenue, utilization, and pre-built KPI/measure questions.",
+  "dataSourceInstructions": "Use this Power BI semantic model (NL2DAX) for revenue, utilization rate, and pre-built business measures. DAX query generation relies solely on the model's metadata and Prep for AI configuration; example queries are not supported for semantic models. Default to the current calendar month when the user does not specify a time period.",
+  "elements": [
+    {
+      "id": "00000000-1400-0001-0001-000000000001",
+      "display_name": "Rentals",
+      "type": "semantic_model.table",
+      "is_selected": true,
+      "description": "Completed rental transactions (gold). Source for revenue and duration questions.",
+      "children": [
+        {
+          "id": "00000000-1400-0001-0002-000000000001",
+          "display_name": "rental_id",
+          "type": "semantic_model.column",
+          "data_type": "string",
+          "is_selected": true,
+          "description": "Unique rental identifier"
+        },
+        {
+          "id": "00000000-1400-0001-0002-000000000002",
+          "display_name": "total_charge",
+          "type": "semantic_model.column",
+          "data_type": "decimal",
+          "is_selected": true,
+          "description": "Total amount charged for the rental"
+        },
+        {
+          "id": "00000000-1400-0001-0002-000000000003",
+          "display_name": "rental_end_date",
+          "type": "semantic_model.column",
+          "data_type": "date",
+          "is_selected": true,
+          "description": "Date the rental ended"
+        }
+      ]
+    },
+    {
+      "id": "00000000-1400-0002-0001-000000000001",
+      "display_name": "Vehicles",
+      "type": "semantic_model.table",
+      "is_selected": true,
+      "description": "Vehicle fleet inventory (gold).",
+      "children": [
+        {
+          "id": "00000000-1400-0002-0002-000000000001",
+          "display_name": "vehicle_id",
+          "type": "semantic_model.column",
+          "data_type": "string",
+          "is_selected": true,
+          "description": "Unique vehicle identifier"
+        },
+        {
+          "id": "00000000-1400-0002-0002-000000000002",
+          "display_name": "status",
+          "type": "semantic_model.column",
+          "data_type": "string",
+          "is_selected": true,
+          "description": "Vehicle availability status"
+        }
+      ]
+    },
+    {
+      "id": "00000000-1400-0003-0001-000000000001",
+      "display_name": "Sites",
+      "type": "semantic_model.table",
+      "is_selected": true,
+      "description": "Rental sites / locations (gold).",
+      "children": [
+        {
+          "id": "00000000-1400-0003-0002-000000000001",
+          "display_name": "site_name",
+          "type": "semantic_model.column",
+          "data_type": "string",
+          "is_selected": true,
+          "description": "Site display name"
+        },
+        {
+          "id": "00000000-1400-0003-0002-000000000002",
+          "display_name": "site_city",
+          "type": "semantic_model.column",
+          "data_type": "string",
+          "is_selected": true,
+          "description": "City the site is located in"
+        }
+      ]
+    },
+    {
+      "id": "00000000-1400-0004-0001-000000000001",
+      "display_name": "Total Revenue",
+      "type": "semantic_model.measure",
+      "is_selected": true,
+      "description": "Sum of total_charge across rentals — pre-built KPI measure."
+    },
+    {
+      "id": "00000000-1400-0004-0001-000000000002",
+      "display_name": "Utilization Rate",
+      "type": "semantic_model.measure",
+      "is_selected": true,
+      "description": "Share of fleet time rented — pre-built KPI measure."
+    }
+  ]
+}

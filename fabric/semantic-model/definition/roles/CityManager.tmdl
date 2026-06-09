@@ -1,0 +1,10 @@
+/// CityManager — demo row-level security role. Members see only sites whose city matches their
+/// mapping. The filter below is a demo placeholder (city = USERPRINCIPALNAME()); replace with a
+/// security-mapping table in production. Object-level security hiding customer email/phone for this
+/// role is applied by fabric/scripts/30_create_semantic_model.py via TOM set_ols (R2).
+role CityManager
+	modelPermission: read
+
+	tablePermission dim_site = 'dim_site'[city] = USERPRINCIPALNAME()
+
+	annotation Zava_RLS_Note = Demo RLS; map members to a city via a security table in production.

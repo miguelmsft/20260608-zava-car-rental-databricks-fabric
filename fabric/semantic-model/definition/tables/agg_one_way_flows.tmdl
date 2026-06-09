@@ -1,0 +1,92 @@
+/// One-way flows (thin gold, V-Ordered). Pickup -> return movement matrix with dual lat/long
+/// so the report can draw origin->destination flow lines on the map.
+table agg_one_way_flows
+	lineageTag: 22222222-0000-0000-0000-000000000008
+
+	measure 'One-Way Trips' = SUM('agg_one_way_flows'[one_way_trips])
+		formatString: #,##0
+		displayFolder: One-Way
+		annotation Zava_KPI = one_way
+
+	measure 'One-Way Revenue' = SUM('agg_one_way_flows'[one_way_revenue_usd])
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: One-Way
+
+	column pickup_site_id
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: pickup_site_id
+
+	column pickup_site_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: pickup_site_name
+
+	column pickup_city
+		dataType: string
+		summarizeBy: none
+		sourceColumn: pickup_city
+		dataCategory: City
+
+	column return_site_id
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: return_site_id
+
+	column return_site_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: return_site_name
+
+	column return_city
+		dataType: string
+		summarizeBy: none
+		sourceColumn: return_city
+		dataCategory: City
+
+	column one_way_trips
+		dataType: int64
+		isHidden
+		summarizeBy: sum
+		sourceColumn: one_way_trips
+
+	column one_way_revenue_usd
+		dataType: double
+		isHidden
+		summarizeBy: sum
+		sourceColumn: one_way_revenue_usd
+
+	column pickup_latitude
+		dataType: double
+		summarizeBy: none
+		sourceColumn: pickup_latitude
+		dataCategory: Latitude
+
+	column pickup_longitude
+		dataType: double
+		summarizeBy: none
+		sourceColumn: pickup_longitude
+		dataCategory: Longitude
+
+	column return_latitude
+		dataType: double
+		summarizeBy: none
+		sourceColumn: return_latitude
+		dataCategory: Latitude
+
+	column return_longitude
+		dataType: double
+		summarizeBy: none
+		sourceColumn: return_longitude
+		dataCategory: Longitude
+
+	partition agg_one_way_flows = entity
+		mode: directLake
+		source
+			entityName: agg_one_way_flows
+			schemaName: thin_gold
+			expressionSource: DatabaseQuery
+
+	annotation Zava_Entity = OneWayFlows

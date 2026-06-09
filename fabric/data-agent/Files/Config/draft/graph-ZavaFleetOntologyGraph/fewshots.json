@@ -1,0 +1,20 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/dataAgent/definition/fewShots/1.0.0/schema.json",
+  "fewShots": [
+    {
+      "id": "3f2b1a90-0001-4c11-9a01-aa0000000001",
+      "question": "Which sites have the most idle vehicles?",
+      "query": "MATCH (v:Vehicle)-[:located_at]->(s:RentalSite) WHERE v.Status = 'idle' RETURN s.SiteName, COUNT(v) AS IdleVehicles ORDER BY IdleVehicles DESC"
+    },
+    {
+      "id": "3f2b1a90-0002-4c11-9a01-aa0000000002",
+      "question": "What are the top one-way flows between sites?",
+      "query": "MATCH (start:RentalSite)<-[:picked_up_at]-(r:Rental)-[:returned_at]->(end:RentalSite) WHERE start <> end RETURN start.SiteName AS PickupSite, end.SiteName AS ReturnSite, COUNT(r) AS Trips ORDER BY Trips DESC"
+    },
+    {
+      "id": "3f2b1a90-0003-4c11-9a01-aa0000000003",
+      "question": "Show all vehicles currently at the Seattle Downtown site",
+      "query": "MATCH (v:Vehicle)-[:located_at]->(s:RentalSite) WHERE s.SiteName = 'Seattle Downtown' RETURN v.VIN, v.Make, v.Model, v.Status"
+    }
+  ]
+}

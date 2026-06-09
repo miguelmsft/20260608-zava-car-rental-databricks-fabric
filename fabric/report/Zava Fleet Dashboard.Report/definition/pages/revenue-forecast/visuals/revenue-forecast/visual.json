@@ -1,0 +1,61 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/1.0.0/schema.json",
+  "name": "b2000000000000000000000000000003",
+  "position": { "x": 24, "y": 88, "z": 0, "width": 1232, "height": 600, "tabOrder": 0 },
+  "_zavaAuthoringNote": "ADVANCED VISUAL (R2): the forecast overlay lives in the Analytics pane and is authored/validated in Power BI Desktop with PBIR preview enabled, then committed and deployed as PBIR. The line chart base (revenue over rental_month) is code-deployable; the 'forecast' analytics object below is a placeholder whose forecastLength / confidenceBand / seasonality are configured in Desktop. See fabric/report/README.md.",
+  "visual": {
+    "visualType": "lineChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": { "SourceRef": { "Entity": "agg_fleet_utilization_by_site_month" } },
+                  "Property": "rental_month"
+                }
+              },
+              "queryRef": "agg_fleet_utilization_by_site_month.rental_month",
+              "nativeQueryRef": "rental_month"
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": { "SourceRef": { "Entity": "agg_revenue_by_site" } },
+                  "Property": "Site Revenue"
+                }
+              },
+              "queryRef": "agg_revenue_by_site.Site Revenue",
+              "nativeQueryRef": "Site Revenue"
+            }
+          ]
+        }
+      }
+    },
+    "objects": {
+      "title": [
+        {
+          "properties": {
+            "text": { "expr": { "Literal": { "Value": "'Revenue Trend & Forecast'" } } },
+            "fontColor": { "solid": { "color": { "expr": { "Literal": { "Value": "'#0B3D91'" } } } } }
+          }
+        }
+      ],
+      "forecast": [
+        {
+          "properties": {
+            "show": { "expr": { "Literal": { "Value": "true" } } },
+            "forecastLength": { "expr": { "Literal": { "Value": "3L" } } },
+            "confidenceBand": { "expr": { "Literal": { "Value": "95D" } } }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

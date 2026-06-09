@@ -1,0 +1,12 @@
+/// Direct Lake on OneLake shared connection. The AzureStorage.DataLake connector points at the
+/// Step-10 Fabric Lakehouse that holds the V-Ordered thin gold aggregates (Step 13) and the
+/// gold star schema (mirrored/shortcut). The __ZAVA_WORKSPACE_ID__ / __ZAVA_LAKEHOUSE_ID__ tokens
+/// are substituted at deploy time by fabric/scripts/30_create_semantic_model.py (GUIDs, not secrets).
+expression DatabaseQuery =
+		let
+			Source = AzureStorage.DataLake("https://onelake.dfs.fabric.microsoft.com/__ZAVA_WORKSPACE_ID__/__ZAVA_LAKEHOUSE_ID__")
+		in
+			Source
+	lineageTag: 11111111-1111-1111-1111-000000000001
+	annotation PBI_NavigationStepName = Navigation
+	annotation PBI_ResultType = Table

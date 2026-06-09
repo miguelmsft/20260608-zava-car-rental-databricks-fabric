@@ -1,0 +1,58 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/1.0.0/schema.json",
+  "name": "a1000000000000000000000000000020",
+  "position": { "x": 24, "y": 264, "z": 20, "width": 1232, "height": 280, "tabOrder": 50 },
+  "visual": {
+    "visualType": "clusteredBarChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": { "SourceRef": { "Entity": "dim_site" } },
+                  "Property": "city"
+                }
+              },
+              "queryRef": "dim_site.city",
+              "nativeQueryRef": "city"
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": { "SourceRef": { "Entity": "agg_revenue_by_site" } },
+                  "Property": "Site Revenue"
+                }
+              },
+              "queryRef": "agg_revenue_by_site.Site Revenue",
+              "nativeQueryRef": "Site Revenue"
+            }
+          ]
+        }
+      }
+    },
+    "objects": {
+      "title": [
+        {
+          "properties": {
+            "text": { "expr": { "Literal": { "Value": "'Revenue by City'" } } },
+            "fontColor": { "solid": { "color": { "expr": { "Literal": { "Value": "'#0B3D91'" } } } } }
+          }
+        }
+      ],
+      "dataPoint": [
+        {
+          "properties": {
+            "fill": { "solid": { "color": { "expr": { "Literal": { "Value": "'#1565C0'" } } } } }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

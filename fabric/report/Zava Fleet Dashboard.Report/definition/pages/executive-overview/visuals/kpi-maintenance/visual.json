@@ -1,0 +1,36 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/1.0.0/schema.json",
+  "name": "a1000000000000000000000000000013",
+  "position": { "x": 960, "y": 96, "z": 13, "width": 296, "height": 150, "tabOrder": 40 },
+  "visual": {
+    "visualType": "card",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": { "SourceRef": { "Entity": "agg_maintenance_cost_by_site" } },
+                  "Property": "Maintenance Cost"
+                }
+              },
+              "queryRef": "agg_maintenance_cost_by_site.Maintenance Cost",
+              "nativeQueryRef": "Maintenance Cost"
+            }
+          ]
+        }
+      }
+    },
+    "objects": {
+      "labels": [
+        {
+          "properties": {
+            "color": { "solid": { "color": { "expr": { "Literal": { "Value": "'#0D47A1'" } } } } }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

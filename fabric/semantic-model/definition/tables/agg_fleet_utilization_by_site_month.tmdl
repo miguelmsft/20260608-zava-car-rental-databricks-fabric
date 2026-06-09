@@ -1,0 +1,100 @@
+/// Fleet utilization by site & month (thin gold, V-Ordered). Utilization is weighted from the base
+/// columns so it aggregates correctly across sites: rented vehicle-days / (fleet x days in month).
+table agg_fleet_utilization_by_site_month
+	lineageTag: 22222222-0000-0000-0000-000000000006
+
+	measure 'Fleet Utilization %' = DIVIDE(SUM('agg_fleet_utilization_by_site_month'[total_rented_days]), SUMX('agg_fleet_utilization_by_site_month', 'agg_fleet_utilization_by_site_month'[fleet_size] * 'agg_fleet_utilization_by_site_month'[days_in_month]))
+		formatString: 0.0%;-0.0%;0.0%
+		displayFolder: Utilization
+		annotation Zava_KPI = fleet_utilization
+
+	measure 'Rented Vehicle-Days' = SUM('agg_fleet_utilization_by_site_month'[total_rented_days])
+		formatString: #,##0
+		displayFolder: Utilization
+
+	column pickup_site_id
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: pickup_site_id
+
+	column rental_month
+		dataType: dateTime
+		formatString: mmm yyyy
+		summarizeBy: none
+		sourceColumn: rental_month
+
+	column total_rentals
+		dataType: int64
+		summarizeBy: sum
+		sourceColumn: total_rentals
+
+	column total_rented_days
+		dataType: double
+		isHidden
+		summarizeBy: sum
+		sourceColumn: total_rented_days
+
+	column fleet_size
+		dataType: int64
+		summarizeBy: none
+		sourceColumn: fleet_size
+
+	column site_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: site_name
+
+	column city
+		dataType: string
+		summarizeBy: none
+		sourceColumn: city
+		dataCategory: City
+
+	column state
+		dataType: string
+		summarizeBy: none
+		sourceColumn: state
+		dataCategory: StateOrProvince
+
+	column latitude
+		dataType: double
+		summarizeBy: none
+		sourceColumn: latitude
+		dataCategory: Latitude
+
+	column longitude
+		dataType: double
+		summarizeBy: none
+		sourceColumn: longitude
+		dataCategory: Longitude
+
+	column is_hq
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: is_hq
+
+	column parking_capacity
+		dataType: int64
+		summarizeBy: none
+		sourceColumn: parking_capacity
+
+	column days_in_month
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: days_in_month
+
+	column utilization_pct
+		dataType: double
+		summarizeBy: none
+		sourceColumn: utilization_pct
+
+	partition agg_fleet_utilization_by_site_month = entity
+		mode: directLake
+		source
+			entityName: agg_fleet_utilization_by_site_month
+			schemaName: thin_gold
+			expressionSource: DatabaseQuery
+
+	annotation Zava_Entity = FleetUtilization

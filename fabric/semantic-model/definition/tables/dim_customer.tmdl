@@ -1,0 +1,64 @@
+/// Customers — renters. email/phone are synthetic PII-like columns kept for the governance demo;
+/// the CityManager role hides them via object-level security (set in 30_create_semantic_model.py).
+table dim_customer
+	lineageTag: 22222222-0000-0000-0000-000000000003
+
+	column customer_id
+		dataType: int64
+		isKey
+		summarizeBy: none
+		sourceColumn: customer_id
+
+	column first_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: first_name
+
+	column last_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: last_name
+
+	column email
+		dataType: string
+		summarizeBy: none
+		sourceColumn: email
+		annotation Zava_PII = email
+
+	column phone
+		dataType: string
+		summarizeBy: none
+		sourceColumn: phone
+		annotation Zava_PII = phone
+
+	column loyalty_tier
+		dataType: string
+		summarizeBy: none
+		sourceColumn: loyalty_tier
+
+	column home_city
+		dataType: string
+		summarizeBy: none
+		sourceColumn: home_city
+		dataCategory: City
+
+	column home_state
+		dataType: string
+		summarizeBy: none
+		sourceColumn: home_state
+		dataCategory: StateOrProvince
+
+	column join_date
+		dataType: dateTime
+		formatString: Long Date
+		summarizeBy: none
+		sourceColumn: join_date
+
+	partition dim_customer = entity
+		mode: directLake
+		source
+			entityName: dim_customer
+			schemaName: gold
+			expressionSource: DatabaseQuery
+
+	annotation Zava_Entity = Customers

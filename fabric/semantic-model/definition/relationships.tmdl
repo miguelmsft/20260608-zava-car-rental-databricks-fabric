@@ -1,0 +1,74 @@
+/// Zava entity relationships (star schema). The fact tables (fact_rental + thin gold aggregates)
+/// fan into the conformed dimensions. Sites is the central conformed dimension so the multi-city
+/// map and decomposition tree slice every fact consistently.
+
+relationship rel_rental_site
+	fromColumn: fact_rental.pickup_site_id
+	toColumn: dim_site.site_id
+	fromCardinality: many
+	toCardinality: one
+	crossFilteringBehavior: oneDirection
+
+relationship rel_rental_vehicle
+	fromColumn: fact_rental.vehicle_id
+	toColumn: dim_vehicle.vehicle_id
+	fromCardinality: many
+	toCardinality: one
+	crossFilteringBehavior: oneDirection
+
+relationship rel_rental_customer
+	fromColumn: fact_rental.customer_id
+	toColumn: dim_customer.customer_id
+	fromCardinality: many
+	toCardinality: one
+	crossFilteringBehavior: oneDirection
+
+relationship rel_vehicle_site
+	fromColumn: dim_vehicle.current_site_id
+	toColumn: dim_site.site_id
+	fromCardinality: many
+	toCardinality: one
+	crossFilteringBehavior: oneDirection
+
+relationship rel_revenue_site
+	fromColumn: agg_revenue_by_site.pickup_site_id
+	toColumn: dim_site.site_id
+	fromCardinality: many
+	toCardinality: one
+	crossFilteringBehavior: oneDirection
+
+relationship rel_utilization_site
+	fromColumn: agg_fleet_utilization_by_site_month.pickup_site_id
+	toColumn: dim_site.site_id
+	fromCardinality: many
+	toCardinality: one
+	crossFilteringBehavior: oneDirection
+
+relationship rel_idle_site
+	fromColumn: agg_idle_vehicles_by_site.current_site_id
+	toColumn: dim_site.site_id
+	fromCardinality: many
+	toCardinality: one
+	crossFilteringBehavior: oneDirection
+
+relationship rel_maintenance_site
+	fromColumn: agg_maintenance_cost_by_site.site_id
+	toColumn: dim_site.site_id
+	fromCardinality: many
+	toCardinality: one
+	crossFilteringBehavior: oneDirection
+
+relationship rel_oneway_pickup_site
+	fromColumn: agg_one_way_flows.pickup_site_id
+	toColumn: dim_site.site_id
+	fromCardinality: many
+	toCardinality: one
+	crossFilteringBehavior: oneDirection
+
+relationship rel_oneway_return_site
+	isActive: false
+	fromColumn: agg_one_way_flows.return_site_id
+	toColumn: dim_site.site_id
+	fromCardinality: many
+	toCardinality: one
+	crossFilteringBehavior: oneDirection

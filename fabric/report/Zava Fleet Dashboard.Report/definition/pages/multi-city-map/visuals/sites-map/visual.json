@@ -1,0 +1,87 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/1.0.0/schema.json",
+  "name": "b2000000000000000000000000000001",
+  "position": { "x": 24, "y": 88, "z": 0, "width": 1232, "height": 600, "tabOrder": 0 },
+  "_zavaAuthoringNote": "ADVANCED VISUAL (R2): the multi-city map is authored/validated in Power BI Desktop with PBIR preview enabled, then committed and deployed as PBIR. The field bindings below are the intended Zava bindings (Seattle HQ + US cities) so Desktop authoring can complete the visual; map rendering options (Bing/Azure Maps, bubble size, heat) are finalized in Desktop. See fabric/report/README.md.",
+  "visual": {
+    "visualType": "map",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": { "SourceRef": { "Entity": "dim_site" } },
+                  "Property": "city"
+                }
+              },
+              "queryRef": "dim_site.city",
+              "nativeQueryRef": "city"
+            }
+          ]
+        },
+        "Latitude": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": { "SourceRef": { "Entity": "dim_site" } },
+                  "Property": "latitude"
+                }
+              },
+              "queryRef": "dim_site.latitude",
+              "nativeQueryRef": "latitude"
+            }
+          ]
+        },
+        "Longitude": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": { "SourceRef": { "Entity": "dim_site" } },
+                  "Property": "longitude"
+                }
+              },
+              "queryRef": "dim_site.longitude",
+              "nativeQueryRef": "longitude"
+            }
+          ]
+        },
+        "Size": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": { "SourceRef": { "Entity": "agg_revenue_by_site" } },
+                  "Property": "Site Revenue"
+                }
+              },
+              "queryRef": "agg_revenue_by_site.Site Revenue",
+              "nativeQueryRef": "Site Revenue"
+            }
+          ]
+        }
+      }
+    },
+    "objects": {
+      "title": [
+        {
+          "properties": {
+            "text": { "expr": { "Literal": { "Value": "'Zava Sites — Revenue & Fleet by US City'" } } },
+            "fontColor": { "solid": { "color": { "expr": { "Literal": { "Value": "'#0B3D91'" } } } } }
+          }
+        }
+      ],
+      "bubbles": [
+        {
+          "properties": {
+            "fill": { "solid": { "color": { "expr": { "Literal": { "Value": "'#1565C0'" } } } } }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

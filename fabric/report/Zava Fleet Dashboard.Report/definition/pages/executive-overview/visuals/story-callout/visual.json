@@ -1,0 +1,30 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/1.0.0/schema.json",
+  "name": "a1000000000000000000000000000002",
+  "position": { "x": 24, "y": 560, "z": 1, "width": 1232, "height": 132, "tabOrder": 70 },
+  "visual": {
+    "visualType": "textbox",
+    "objects": {
+      "general": [
+        {
+          "properties": {
+            "paragraphs": [
+              {
+                "textRuns": [
+                  {
+                    "value": "From certified Databricks asset to governed Power BI insight: ",
+                    "textStyle": { "fontFamily": "Segoe UI Semibold", "fontSize": "11pt", "color": "#0B3D91" }
+                  },
+                  {
+                    "value": "Zava's gold certified data asset in Unity Catalog is mirrored no-copy into OneLake, surfaced through a Direct Lake on OneLake semantic model, and consumed here in Power BI — with Purview lineage and RLS/OLS governance carried end to end.",
+                    "textStyle": { "fontFamily": "Segoe UI", "fontSize": "11pt", "color": "#3C5A77" }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

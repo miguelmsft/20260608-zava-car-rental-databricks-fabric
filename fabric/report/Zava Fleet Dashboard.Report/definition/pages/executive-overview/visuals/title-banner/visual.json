@@ -1,0 +1,26 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/1.0.0/schema.json",
+  "name": "a1000000000000000000000000000001",
+  "position": { "x": 24, "y": 16, "z": 0, "width": 900, "height": 56, "tabOrder": 0 },
+  "visual": {
+    "visualType": "textbox",
+    "objects": {
+      "general": [
+        {
+          "properties": {
+            "paragraphs": [
+              {
+                "textRuns": [
+                  {
+                    "value": "Zava Fleet Analytics — Executive Overview",
+                    "textStyle": { "fontFamily": "Segoe UI Semibold", "fontSize": "20pt", "color": "#0B3D91" }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

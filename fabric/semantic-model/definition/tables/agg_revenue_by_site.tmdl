@@ -1,0 +1,88 @@
+/// Revenue per site (thin gold, V-Ordered) — geo-enriched so the multi-city map binds to one table.
+table agg_revenue_by_site
+	lineageTag: 22222222-0000-0000-0000-000000000005
+
+	measure 'Site Revenue' = SUM('agg_revenue_by_site'[total_revenue_usd])
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: Revenue
+		annotation Zava_KPI = revenue_per_site
+
+	measure 'Avg Revenue per Rental' = AVERAGE('agg_revenue_by_site'[avg_revenue_per_rental_usd])
+		formatString: \$#,0.00;(\$#,0.00);\$#,0.00
+		displayFolder: Revenue
+
+	column pickup_site_id
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: pickup_site_id
+
+	column site_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: site_name
+
+	column city
+		dataType: string
+		summarizeBy: none
+		sourceColumn: city
+		dataCategory: City
+
+	column state
+		dataType: string
+		summarizeBy: none
+		sourceColumn: state
+		dataCategory: StateOrProvince
+
+	column latitude
+		dataType: double
+		summarizeBy: none
+		sourceColumn: latitude
+		dataCategory: Latitude
+
+	column longitude
+		dataType: double
+		summarizeBy: none
+		sourceColumn: longitude
+		dataCategory: Longitude
+
+	column is_hq
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: is_hq
+
+	column parking_capacity
+		dataType: int64
+		summarizeBy: sum
+		sourceColumn: parking_capacity
+
+	column total_rentals
+		dataType: int64
+		summarizeBy: sum
+		sourceColumn: total_rentals
+
+	column total_revenue_usd
+		dataType: double
+		isHidden
+		summarizeBy: sum
+		sourceColumn: total_revenue_usd
+
+	column avg_revenue_per_rental_usd
+		dataType: double
+		isHidden
+		summarizeBy: none
+		sourceColumn: avg_revenue_per_rental_usd
+
+	column avg_rental_days
+		dataType: double
+		summarizeBy: none
+		sourceColumn: avg_rental_days
+
+	partition agg_revenue_by_site = entity
+		mode: directLake
+		source
+			entityName: agg_revenue_by_site
+			schemaName: thin_gold
+			expressionSource: DatabaseQuery
+
+	annotation Zava_Entity = RevenuePerSite

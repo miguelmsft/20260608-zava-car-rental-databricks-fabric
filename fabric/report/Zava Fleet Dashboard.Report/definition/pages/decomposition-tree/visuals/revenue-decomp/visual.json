@@ -1,0 +1,72 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/1.0.0/schema.json",
+  "name": "b2000000000000000000000000000002",
+  "position": { "x": 24, "y": 88, "z": 0, "width": 1232, "height": 600, "tabOrder": 0 },
+  "_zavaAuthoringNote": "ADVANCED VISUAL (R2): the decomposition tree is authored/validated in Power BI Desktop with PBIR preview enabled, then committed and deployed as PBIR. The 'Analyze' measure and 'Explain by' fields below are the intended Zava breakdown (Total Revenue by State -> City -> Vehicle Class); AI-split behavior and expansion state are finalized in Desktop. See fabric/report/README.md.",
+  "visual": {
+    "visualType": "decompositionTreeVisual",
+    "query": {
+      "queryState": {
+        "Analyze": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": { "SourceRef": { "Entity": "fact_rental" } },
+                  "Property": "Total Revenue"
+                }
+              },
+              "queryRef": "fact_rental.Total Revenue",
+              "nativeQueryRef": "Total Revenue"
+            }
+          ]
+        },
+        "Explain By": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": { "SourceRef": { "Entity": "dim_site" } },
+                  "Property": "state"
+                }
+              },
+              "queryRef": "dim_site.state",
+              "nativeQueryRef": "state"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": { "SourceRef": { "Entity": "dim_site" } },
+                  "Property": "city"
+                }
+              },
+              "queryRef": "dim_site.city",
+              "nativeQueryRef": "city"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": { "SourceRef": { "Entity": "dim_vehicle" } },
+                  "Property": "class_name"
+                }
+              },
+              "queryRef": "dim_vehicle.class_name",
+              "nativeQueryRef": "class_name"
+            }
+          ]
+        }
+      }
+    },
+    "objects": {
+      "title": [
+        {
+          "properties": {
+            "text": { "expr": { "Literal": { "Value": "'Revenue Decomposition — State / City / Vehicle Class'" } } },
+            "fontColor": { "solid": { "color": { "expr": { "Literal": { "Value": "'#0B3D91'" } } } } }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

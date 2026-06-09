@@ -1,0 +1,4 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/dataAgent/definition/publishInfo/1.0.0/schema.json",
+  "description": "Zava Fleet Insights Agent - natural-language Q&A over the Zava Fleet Analytics Direct Lake semantic model (NL2DAX) and the auto-created Zava Fleet Ontology Graph (NL2GQL). Answers questions about fleet utilization, idle vehicles, site performance, and one-way rental flows beyond the curated Power BI report."
+}

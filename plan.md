@@ -560,8 +560,8 @@ Each step lists **Status**, **Files**, **Depends on**, **Tasks**, **Verification
 
 ### Phase 4 — Direct Lake Reporting
 
-#### Step 13: Thin Fabric gold / aggregation layer — ⬜ Not started
-**Status:** ⬜ Not started
+#### Step 13: Thin Fabric gold / aggregation layer — ✅ Done
+**Status:** ✅ Done
 **Files:** `fabric/scripts/40_build_thin_gold.py`
 **Depends on:** Step 11, Step 12
 
@@ -577,8 +577,8 @@ Each step lists **Status**, **Files**, **Depends on**, **Tasks**, **Verification
 
 **Manual steps:** none.
 
-#### Step 14: Direct Lake semantic model (semantic-link-labs + TOM) — ⬜ Not started
-**Status:** ⬜ Not started
+#### Step 14: Direct Lake semantic model (semantic-link-labs + TOM) — ✅ Done
+**Status:** ✅ Done
 **Files:** `fabric/scripts/30_create_semantic_model.py`, `fabric/semantic-model/*`
 **Depends on:** Step 13
 
@@ -596,8 +596,8 @@ Each step lists **Status**, **Files**, **Depends on**, **Tasks**, **Verification
 
 **Manual steps:** none (programmatic — R2).
 
-#### Step 15: Power BI report (PBIP/PBIR) — blue Zava theme, wow visuals — ⬜ Not started
-**Status:** ⬜ Not started
+#### Step 15: Power BI report (PBIP/PBIR) — blue Zava theme, wow visuals — ✅ Done
+**Status:** ✅ Done
 **Files:** `fabric/report/*`, `fabric/theme/zava-blue-theme.json`, `fabric/scripts/50_deploy_report.py`
 **Depends on:** Step 14
 
@@ -615,8 +615,8 @@ Each step lists **Status**, **Files**, **Depends on**, **Tasks**, **Verification
 
 ### Phase 5 — Fabric IQ (Ontology, Graph, Data Agent, Real-Time, Activator alerting + optional Operations Agent)
 
-#### Step 16: Ontology (preview) + auto Graph (GA) — ⬜ Not started
-**Status:** ⬜ Not started
+#### Step 16: Ontology (preview) + auto Graph (GA) — ✅ Done
+**Status:** ✅ Done
 **Files:** `fabric/scripts/60_create_ontology.py`, `fabric/ontology/ontology_definition.json`, `docs/manual-steps.md` (append)
 **Depends on:** Step 14
 
@@ -632,8 +632,8 @@ Each step lists **Status**, **Files**, **Depends on**, **Tasks**, **Verification
 
 **Manual steps:** **"Generate ontology from semantic model" is UI-only** (R4). Documented with click-path; REST graph-source fallback noted. Appended to appendix.
 
-#### Step 17: Fabric Data Agent (GA) — NL insights via REST — ⬜ Not started
-**Status:** ⬜ Not started
+#### Step 17: Fabric Data Agent (GA) — NL insights via REST — ✅ Done
+**Status:** ✅ Done
 **Files:** `fabric/scripts/70_create_data_agent.py`, `fabric/data-agent/*`, `docs/manual-steps.md` (append)
 **Depends on:** Step 14, Step 16
 
@@ -720,8 +720,8 @@ Each step lists **Status**, **Files**, **Depends on**, **Tasks**, **Verification
 
 ### Phase 6 — Governance
 
-#### Step 21: Policy Weaver — UC access → OneLake security — ⬜ Not started
-**Status:** ⬜ Not started
+#### Step 21: Policy Weaver — UC access → OneLake security — ✅ Done
+**Status:** ✅ Done
 **Files:** `scripts/governance/policy-weaver/policy_weaver_config.yaml`, `scripts/governance/policy-weaver/run_policy_weaver.py`, `docs/manual-steps.md` (append)
 **Depends on:** Step 9 (UC policies), Step 11, Step 12 (OneLake targets)
 
@@ -737,8 +737,11 @@ Each step lists **Status**, **Files**, **Depends on**, **Tasks**, **Verification
 
 **Manual steps:** **OneLake Security role review/assignment** and identity consent are UI-assisted (R5/R1). Appended to appendix.
 
-#### Step 22: Microsoft Purview — catalog, lineage, labels, DLP — ⬜ Not started
-**Status:** ⬜ Not started
+**Implementation Notes:**
+- 2026-06-08 (Round 2 rework): Addressed reviewer 🟡 Important finding — `run_policy_weaver.py` now enforces the pinned Policy Weaver `0.4.0` version. Added `installed_version()` (stdlib `importlib.metadata.version("policy-weaver")`) and rewrote `ensure_installed()` to fail fast with an actionable message (`pip install policy-weaver==0.4.0`) when the installed distribution version is missing/undeterminable or != `0.4.0`; `--install` installs EXACTLY `policy-weaver==0.4.0`. Dry-run, env/Key Vault SP auth, no-secrets posture, and logging unchanged. Verified via `ast.parse`, a mismatch/correct/not-installed simulation, and a `--dry-run` smoke run. Local implementation and verification complete; awaiting reviewer verdict.
+
+#### Step 22: Microsoft Purview — catalog, lineage, labels, DLP — ✅ Done
+**Status:** ✅ Done
 **Files:** `scripts/governance/purview/setup_purview_scans.py`, `scripts/governance/purview/lineage_runbook.md`, `docs/manual-steps.md` (append)
 **Depends on:** Step 8, Step 11, Step 14, Step 15
 

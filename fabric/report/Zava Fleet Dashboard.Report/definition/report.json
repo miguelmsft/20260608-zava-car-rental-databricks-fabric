@@ -1,0 +1,38 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/report/2.0.0/schema.json",
+  "themeCollection": {
+    "customTheme": {
+      "name": "Zava Blue",
+      "type": "RegisteredResources",
+      "path": "zava-blue-theme.json"
+    }
+  },
+  "resourcePackages": [
+    {
+      "name": "RegisteredResources",
+      "type": "RegisteredResources",
+      "items": [
+        {
+          "name": "zava-blue-theme.json",
+          "path": "zava-blue-theme.json",
+          "type": "CustomTheme"
+        }
+      ]
+    }
+  ],
+  "settings": {
+    "useStylableVisualContainerHeader": true,
+    "defaultDrillFilterOtherVisuals": true,
+    "useNewFilterPaneExperience": true
+  },
+  "annotations": [
+    {
+      "name": "ZavaBrand",
+      "value": "blue"
+    },
+    {
+      "name": "ZavaStory",
+      "value": "Certified Databricks data asset -> OneLake mirror -> Direct Lake semantic model -> governed Power BI insight."
+    }
+  ]
+}

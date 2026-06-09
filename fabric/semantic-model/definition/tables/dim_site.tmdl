@@ -1,0 +1,76 @@
+/// Sites — Zava locations (Seattle HQ + US cities). Conformed dimension; lat/long drive the maps.
+table dim_site
+	lineageTag: 22222222-0000-0000-0000-000000000001
+
+	column site_id
+		dataType: int64
+		isKey
+		summarizeBy: none
+		sourceColumn: site_id
+
+	column site_code
+		dataType: string
+		summarizeBy: none
+		sourceColumn: site_code
+
+	column site_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: site_name
+
+	column city
+		dataType: string
+		summarizeBy: none
+		sourceColumn: city
+		dataCategory: City
+
+	column state
+		dataType: string
+		summarizeBy: none
+		sourceColumn: state
+		dataCategory: StateOrProvince
+
+	column latitude
+		dataType: double
+		summarizeBy: none
+		sourceColumn: latitude
+		dataCategory: Latitude
+
+	column longitude
+		dataType: double
+		summarizeBy: none
+		sourceColumn: longitude
+		dataCategory: Longitude
+
+	column is_hq
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: is_hq
+
+	column parking_capacity
+		dataType: int64
+		summarizeBy: sum
+		sourceColumn: parking_capacity
+
+	column opened_date
+		dataType: dateTime
+		formatString: Long Date
+		summarizeBy: none
+		sourceColumn: opened_date
+
+	hierarchy Geography
+		level State
+			column: state
+		level City
+			column: city
+		level Site
+			column: site_name
+
+	partition dim_site = entity
+		mode: directLake
+		source
+			entityName: dim_site
+			schemaName: gold
+			expressionSource: DatabaseQuery
+
+	annotation Zava_Entity = Sites

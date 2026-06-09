@@ -1,0 +1,1486 @@
+{
+  "_comment": "Zava Fabric IQ Ontology (preview) item definition - plan Step 16 (R4). Models the Zava car-rental business entities over the Step-14 Direct Lake semantic model / gold lakehouse tables. Schema-correct per the official Fabric Ontology item definition: property valueType is one of String/Boolean/DateTime/Object/BigInt/Double (NEVER Integer - whole numbers use BigInt, money uses Double); relationship types carry namespace/id/name/namespaceType/source.entityTypeId/target.entityTypeId; data bindings nest under dataBindingConfiguration (dataBindingType/propertyBindings/sourceTableProperties). The deploy script (60_create_ontology.py) decomposes this document into the Fabric REST create-with-definition parts and substitutes the __ZAVA_WORKSPACE_ID__ / __ZAVA_LAKEHOUSE_ID__ / __ZAVA_GOLD_SCHEMA__ placeholder tokens at deploy time. No secrets.",
+  "displayName": "ZavaFleetOntology",
+  "type": "Ontology",
+  "namespace": "usertypes",
+  "namespaceType": "Custom",
+  "entityTypes": [
+    {
+      "id": "8813598896001",
+      "namespace": "usertypes",
+      "namespaceType": "Custom",
+      "baseEntityTypeId": null,
+      "name": "RentalSite",
+      "entityIdParts": [
+        "3117068036370001001"
+      ],
+      "displayNamePropertyId": "3117068036370001003",
+      "visibility": "Visible",
+      "properties": [
+        {
+          "id": "3117068036370001001",
+          "name": "site_id",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "String"
+        },
+        {
+          "id": "3117068036370001002",
+          "name": "site_code",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "String"
+        },
+        {
+          "id": "3117068036370001003",
+          "name": "site_name",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "String"
+        },
+        {
+          "id": "3117068036370001004",
+          "name": "city",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "String"
+        },
+        {
+          "id": "3117068036370001005",
+          "name": "state",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "String"
+        },
+        {
+          "id": "3117068036370001006",
+          "name": "latitude",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "Double"
+        },
+        {
+          "id": "3117068036370001007",
+          "name": "longitude",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "Double"
+        },
+        {
+          "id": "3117068036370001008",
+          "name": "is_hq",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "Boolean"
+        },
+        {
+          "id": "3117068036370001009",
+          "name": "parking_capacity",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "BigInt"
+        },
+        {
+          "id": "3117068036370001010",
+          "name": "opened_date",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "DateTime"
+        }
+      ],
+      "timeseriesProperties": [],
+      "dataBinding": {
+        "id": "00000000-0000-0000-0000-000000000001",
+        "dataBindingConfiguration": {
+          "dataBindingType": "NonTimeSeries",
+          "propertyBindings": [
+            {
+              "sourceColumnName": "site_id",
+              "targetPropertyId": "3117068036370001001"
+            },
+            {
+              "sourceColumnName": "site_code",
+              "targetPropertyId": "3117068036370001002"
+            },
+            {
+              "sourceColumnName": "site_name",
+              "targetPropertyId": "3117068036370001003"
+            },
+            {
+              "sourceColumnName": "city",
+              "targetPropertyId": "3117068036370001004"
+            },
+            {
+              "sourceColumnName": "state",
+              "targetPropertyId": "3117068036370001005"
+            },
+            {
+              "sourceColumnName": "latitude",
+              "targetPropertyId": "3117068036370001006"
+            },
+            {
+              "sourceColumnName": "longitude",
+              "targetPropertyId": "3117068036370001007"
+            },
+            {
+              "sourceColumnName": "is_hq",
+              "targetPropertyId": "3117068036370001008"
+            },
+            {
+              "sourceColumnName": "parking_capacity",
+              "targetPropertyId": "3117068036370001009"
+            },
+            {
+              "sourceColumnName": "opened_date",
+              "targetPropertyId": "3117068036370001010"
+            }
+          ],
+          "sourceTableProperties": {
+            "sourceType": "LakehouseTable",
+            "workspaceId": "__ZAVA_WORKSPACE_ID__",
+            "itemId": "__ZAVA_LAKEHOUSE_ID__",
+            "sourceTableName": "dim_site",
+            "sourceSchema": "__ZAVA_GOLD_SCHEMA__"
+          }
+        }
+      }
+    },
+    {
+      "id": "8813598896002",
+      "namespace": "usertypes",
+      "namespaceType": "Custom",
+      "baseEntityTypeId": null,
+      "name": "Vehicle",
+      "entityIdParts": [
+        "3117068036370002001"
+      ],
+      "displayNamePropertyId": "3117068036370002002",
+      "visibility": "Visible",
+      "properties": [
+        {
+          "id": "3117068036370002001",
+          "name": "vehicle_id",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "String"
+        },
+        {
+          "id": "3117068036370002002",
+          "name": "vin",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "String"
+        },
+        {
+          "id": "3117068036370002003",
+          "name": "make",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "String"
+        },
+        {
+          "id": "3117068036370002004",
+          "name": "model",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "String"
+        },
+        {
+          "id": "3117068036370002005",
+          "name": "model_year",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "BigInt"
+        },
+        {
+          "id": "3117068036370002006",
+          "name": "color",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "String"
+        },
+        {
+          "id": "3117068036370002007",
+          "name": "license_plate",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "String"
+        },
+        {
+          "id": "3117068036370002008",
+          "name": "status",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "String"
+        },
+        {
+          "id": "3117068036370002009",
+          "name": "odometer_miles",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "BigInt"
+        },
+        {
+          "id": "3117068036370002010",
+          "name": "acquired_date",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "DateTime"
+        }
+      ],
+      "timeseriesProperties": [],
+      "dataBinding": {
+        "id": "00000000-0000-0000-0000-000000000002",
+        "dataBindingConfiguration": {
+          "dataBindingType": "NonTimeSeries",
+          "propertyBindings": [
+            {
+              "sourceColumnName": "vehicle_id",
+              "targetPropertyId": "3117068036370002001"
+            },
+            {
+              "sourceColumnName": "vin",
+              "targetPropertyId": "3117068036370002002"
+            },
+            {
+              "sourceColumnName": "make",
+              "targetPropertyId": "3117068036370002003"
+            },
+            {
+              "sourceColumnName": "model",
+              "targetPropertyId": "3117068036370002004"
+            },
+            {
+              "sourceColumnName": "model_year",
+              "targetPropertyId": "3117068036370002005"
+            },
+            {
+              "sourceColumnName": "color",
+              "targetPropertyId": "3117068036370002006"
+            },
+            {
+              "sourceColumnName": "license_plate",
+              "targetPropertyId": "3117068036370002007"
+            },
+            {
+              "sourceColumnName": "status",
+              "targetPropertyId": "3117068036370002008"
+            },
+            {
+              "sourceColumnName": "odometer_miles",
+              "targetPropertyId": "3117068036370002009"
+            },
+            {
+              "sourceColumnName": "acquired_date",
+              "targetPropertyId": "3117068036370002010"
+            }
+          ],
+          "sourceTableProperties": {
+            "sourceType": "LakehouseTable",
+            "workspaceId": "__ZAVA_WORKSPACE_ID__",
+            "itemId": "__ZAVA_LAKEHOUSE_ID__",
+            "sourceTableName": "dim_vehicle",
+            "sourceSchema": "__ZAVA_GOLD_SCHEMA__"
+          }
+        }
+      }
+    },
+    {
+      "id": "8813598896003",
+      "namespace": "usertypes",
+      "namespaceType": "Custom",
+      "baseEntityTypeId": null,
+      "name": "VehicleClass",
+      "entityIdParts": [
+        "3117068036370003001"
+      ],
+      "displayNamePropertyId": "3117068036370003002",
+      "visibility": "Visible",
+      "properties": [
+        {
+          "id": "3117068036370003001",
+          "name": "vehicle_class_id",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "String"
+        },
+        {
+          "id": "3117068036370003002",
+          "name": "class_name",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "String"
+        },
+        {
+          "id": "3117068036370003003",
+          "name": "category",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "String"
+        },
+        {
+          "id": "3117068036370003004",
+          "name": "daily_base_rate_usd",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "Double"
+        },
+        {
+          "id": "3117068036370003005",
+          "name": "seats",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "BigInt"
+        },
+        {
+          "id": "3117068036370003006",
+          "name": "is_ev",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "Boolean"
+        }
+      ],
+      "timeseriesProperties": [],
+      "dataBinding": {
+        "id": "00000000-0000-0000-0000-000000000003",
+        "dataBindingConfiguration": {
+          "dataBindingType": "NonTimeSeries",
+          "propertyBindings": [
+            {
+              "sourceColumnName": "vehicle_class_id",
+              "targetPropertyId": "3117068036370003001"
+            },
+            {
+              "sourceColumnName": "class_name",
+              "targetPropertyId": "3117068036370003002"
+            },
+            {
+              "sourceColumnName": "category",
+              "targetPropertyId": "3117068036370003003"
+            },
+            {
+              "sourceColumnName": "daily_base_rate_usd",
+              "targetPropertyId": "3117068036370003004"
+            },
+            {
+              "sourceColumnName": "seats",
+              "targetPropertyId": "3117068036370003005"
+            },
+            {
+              "sourceColumnName": "is_ev",
+              "targetPropertyId": "3117068036370003006"
+            }
+          ],
+          "sourceTableProperties": {
+            "sourceType": "LakehouseTable",
+            "workspaceId": "__ZAVA_WORKSPACE_ID__",
+            "itemId": "__ZAVA_LAKEHOUSE_ID__",
+            "sourceTableName": "dim_vehicle_class",
+            "sourceSchema": "__ZAVA_GOLD_SCHEMA__"
+          }
+        }
+      }
+    },
+    {
+      "id": "8813598896004",
+      "namespace": "usertypes",
+      "namespaceType": "Custom",
+      "baseEntityTypeId": null,
+      "name": "Customer",
+      "entityIdParts": [
+        "3117068036370004001"
+      ],
+      "displayNamePropertyId": "3117068036370004003",
+      "visibility": "Visible",
+      "properties": [
+        {
+          "id": "3117068036370004001",
+          "name": "customer_id",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "String"
+        },
+        {
+          "id": "3117068036370004002",
+          "name": "first_name",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "String"
+        },
+        {
+          "id": "3117068036370004003",
+          "name": "last_name",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "String"
+        },
+        {
+          "id": "3117068036370004004",
+          "name": "email",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "String"
+        },
+        {
+          "id": "3117068036370004005",
+          "name": "phone",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "String"
+        },
+        {
+          "id": "3117068036370004006",
+          "name": "loyalty_tier",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "String"
+        },
+        {
+          "id": "3117068036370004007",
+          "name": "home_city",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "String"
+        },
+        {
+          "id": "3117068036370004008",
+          "name": "home_state",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "String"
+        },
+        {
+          "id": "3117068036370004009",
+          "name": "join_date",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "DateTime"
+        }
+      ],
+      "timeseriesProperties": [],
+      "dataBinding": {
+        "id": "00000000-0000-0000-0000-000000000004",
+        "dataBindingConfiguration": {
+          "dataBindingType": "NonTimeSeries",
+          "propertyBindings": [
+            {
+              "sourceColumnName": "customer_id",
+              "targetPropertyId": "3117068036370004001"
+            },
+            {
+              "sourceColumnName": "first_name",
+              "targetPropertyId": "3117068036370004002"
+            },
+            {
+              "sourceColumnName": "last_name",
+              "targetPropertyId": "3117068036370004003"
+            },
+            {
+              "sourceColumnName": "email",
+              "targetPropertyId": "3117068036370004004"
+            },
+            {
+              "sourceColumnName": "phone",
+              "targetPropertyId": "3117068036370004005"
+            },
+            {
+              "sourceColumnName": "loyalty_tier",
+              "targetPropertyId": "3117068036370004006"
+            },
+            {
+              "sourceColumnName": "home_city",
+              "targetPropertyId": "3117068036370004007"
+            },
+            {
+              "sourceColumnName": "home_state",
+              "targetPropertyId": "3117068036370004008"
+            },
+            {
+              "sourceColumnName": "join_date",
+              "targetPropertyId": "3117068036370004009"
+            }
+          ],
+          "sourceTableProperties": {
+            "sourceType": "LakehouseTable",
+            "workspaceId": "__ZAVA_WORKSPACE_ID__",
+            "itemId": "__ZAVA_LAKEHOUSE_ID__",
+            "sourceTableName": "dim_customer",
+            "sourceSchema": "__ZAVA_GOLD_SCHEMA__"
+          }
+        }
+      }
+    },
+    {
+      "id": "8813598896005",
+      "namespace": "usertypes",
+      "namespaceType": "Custom",
+      "baseEntityTypeId": null,
+      "name": "Reservation",
+      "entityIdParts": [
+        "3117068036370005001"
+      ],
+      "displayNamePropertyId": "3117068036370005001",
+      "visibility": "Visible",
+      "properties": [
+        {
+          "id": "3117068036370005001",
+          "name": "reservation_id",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "String"
+        },
+        {
+          "id": "3117068036370005002",
+          "name": "reserved_at",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "DateTime"
+        },
+        {
+          "id": "3117068036370005003",
+          "name": "pickup_date",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "DateTime"
+        },
+        {
+          "id": "3117068036370005004",
+          "name": "planned_return_date",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "DateTime"
+        },
+        {
+          "id": "3117068036370005005",
+          "name": "status",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "String"
+        }
+      ],
+      "timeseriesProperties": [],
+      "dataBinding": {
+        "id": "00000000-0000-0000-0000-000000000005",
+        "dataBindingConfiguration": {
+          "dataBindingType": "NonTimeSeries",
+          "propertyBindings": [
+            {
+              "sourceColumnName": "reservation_id",
+              "targetPropertyId": "3117068036370005001"
+            },
+            {
+              "sourceColumnName": "reserved_at",
+              "targetPropertyId": "3117068036370005002"
+            },
+            {
+              "sourceColumnName": "pickup_date",
+              "targetPropertyId": "3117068036370005003"
+            },
+            {
+              "sourceColumnName": "planned_return_date",
+              "targetPropertyId": "3117068036370005004"
+            },
+            {
+              "sourceColumnName": "status",
+              "targetPropertyId": "3117068036370005005"
+            }
+          ],
+          "sourceTableProperties": {
+            "sourceType": "LakehouseTable",
+            "workspaceId": "__ZAVA_WORKSPACE_ID__",
+            "itemId": "__ZAVA_LAKEHOUSE_ID__",
+            "sourceTableName": "fact_reservation",
+            "sourceSchema": "__ZAVA_GOLD_SCHEMA__"
+          }
+        }
+      }
+    },
+    {
+      "id": "8813598896006",
+      "namespace": "usertypes",
+      "namespaceType": "Custom",
+      "baseEntityTypeId": null,
+      "name": "Rental",
+      "entityIdParts": [
+        "3117068036370006001"
+      ],
+      "displayNamePropertyId": "3117068036370006001",
+      "visibility": "Visible",
+      "properties": [
+        {
+          "id": "3117068036370006001",
+          "name": "rental_id",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "String"
+        },
+        {
+          "id": "3117068036370006002",
+          "name": "pickup_ts",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "DateTime"
+        },
+        {
+          "id": "3117068036370006003",
+          "name": "planned_return_ts",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "DateTime"
+        },
+        {
+          "id": "3117068036370006004",
+          "name": "return_ts",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "DateTime"
+        },
+        {
+          "id": "3117068036370006005",
+          "name": "odometer_out",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "BigInt"
+        },
+        {
+          "id": "3117068036370006006",
+          "name": "odometer_in",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "BigInt"
+        },
+        {
+          "id": "3117068036370006007",
+          "name": "miles_driven",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "BigInt"
+        },
+        {
+          "id": "3117068036370006008",
+          "name": "is_one_way",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "Boolean"
+        },
+        {
+          "id": "3117068036370006009",
+          "name": "status",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "String"
+        }
+      ],
+      "timeseriesProperties": [],
+      "dataBinding": {
+        "id": "00000000-0000-0000-0000-000000000006",
+        "dataBindingConfiguration": {
+          "dataBindingType": "NonTimeSeries",
+          "propertyBindings": [
+            {
+              "sourceColumnName": "rental_id",
+              "targetPropertyId": "3117068036370006001"
+            },
+            {
+              "sourceColumnName": "pickup_ts",
+              "targetPropertyId": "3117068036370006002"
+            },
+            {
+              "sourceColumnName": "planned_return_ts",
+              "targetPropertyId": "3117068036370006003"
+            },
+            {
+              "sourceColumnName": "return_ts",
+              "targetPropertyId": "3117068036370006004"
+            },
+            {
+              "sourceColumnName": "odometer_out",
+              "targetPropertyId": "3117068036370006005"
+            },
+            {
+              "sourceColumnName": "odometer_in",
+              "targetPropertyId": "3117068036370006006"
+            },
+            {
+              "sourceColumnName": "miles_driven",
+              "targetPropertyId": "3117068036370006007"
+            },
+            {
+              "sourceColumnName": "is_one_way",
+              "targetPropertyId": "3117068036370006008"
+            },
+            {
+              "sourceColumnName": "status",
+              "targetPropertyId": "3117068036370006009"
+            }
+          ],
+          "sourceTableProperties": {
+            "sourceType": "LakehouseTable",
+            "workspaceId": "__ZAVA_WORKSPACE_ID__",
+            "itemId": "__ZAVA_LAKEHOUSE_ID__",
+            "sourceTableName": "fact_rental",
+            "sourceSchema": "__ZAVA_GOLD_SCHEMA__"
+          }
+        }
+      }
+    },
+    {
+      "id": "8813598896007",
+      "namespace": "usertypes",
+      "namespaceType": "Custom",
+      "baseEntityTypeId": null,
+      "name": "Payment",
+      "entityIdParts": [
+        "3117068036370007001"
+      ],
+      "displayNamePropertyId": "3117068036370007001",
+      "visibility": "Visible",
+      "properties": [
+        {
+          "id": "3117068036370007001",
+          "name": "payment_id",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "String"
+        },
+        {
+          "id": "3117068036370007002",
+          "name": "rental_days",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "BigInt"
+        },
+        {
+          "id": "3117068036370007003",
+          "name": "base_amount_usd",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "Double"
+        },
+        {
+          "id": "3117068036370007004",
+          "name": "one_way_fee_usd",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "Double"
+        },
+        {
+          "id": "3117068036370007005",
+          "name": "taxes_fees_usd",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "Double"
+        },
+        {
+          "id": "3117068036370007006",
+          "name": "total_amount_usd",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "Double"
+        },
+        {
+          "id": "3117068036370007007",
+          "name": "currency",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "String"
+        },
+        {
+          "id": "3117068036370007008",
+          "name": "payment_method",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "String"
+        },
+        {
+          "id": "3117068036370007009",
+          "name": "payment_ts",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "DateTime"
+        },
+        {
+          "id": "3117068036370007010",
+          "name": "status",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "String"
+        }
+      ],
+      "timeseriesProperties": [],
+      "dataBinding": {
+        "id": "00000000-0000-0000-0000-000000000007",
+        "dataBindingConfiguration": {
+          "dataBindingType": "NonTimeSeries",
+          "propertyBindings": [
+            {
+              "sourceColumnName": "payment_id",
+              "targetPropertyId": "3117068036370007001"
+            },
+            {
+              "sourceColumnName": "rental_days",
+              "targetPropertyId": "3117068036370007002"
+            },
+            {
+              "sourceColumnName": "base_amount_usd",
+              "targetPropertyId": "3117068036370007003"
+            },
+            {
+              "sourceColumnName": "one_way_fee_usd",
+              "targetPropertyId": "3117068036370007004"
+            },
+            {
+              "sourceColumnName": "taxes_fees_usd",
+              "targetPropertyId": "3117068036370007005"
+            },
+            {
+              "sourceColumnName": "total_amount_usd",
+              "targetPropertyId": "3117068036370007006"
+            },
+            {
+              "sourceColumnName": "currency",
+              "targetPropertyId": "3117068036370007007"
+            },
+            {
+              "sourceColumnName": "payment_method",
+              "targetPropertyId": "3117068036370007008"
+            },
+            {
+              "sourceColumnName": "payment_ts",
+              "targetPropertyId": "3117068036370007009"
+            },
+            {
+              "sourceColumnName": "status",
+              "targetPropertyId": "3117068036370007010"
+            }
+          ],
+          "sourceTableProperties": {
+            "sourceType": "LakehouseTable",
+            "workspaceId": "__ZAVA_WORKSPACE_ID__",
+            "itemId": "__ZAVA_LAKEHOUSE_ID__",
+            "sourceTableName": "fact_payment",
+            "sourceSchema": "__ZAVA_GOLD_SCHEMA__"
+          }
+        }
+      }
+    },
+    {
+      "id": "8813598896008",
+      "namespace": "usertypes",
+      "namespaceType": "Custom",
+      "baseEntityTypeId": null,
+      "name": "Maintenance",
+      "entityIdParts": [
+        "3117068036370008001"
+      ],
+      "displayNamePropertyId": "3117068036370008002",
+      "visibility": "Visible",
+      "properties": [
+        {
+          "id": "3117068036370008001",
+          "name": "maintenance_id",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "String"
+        },
+        {
+          "id": "3117068036370008002",
+          "name": "maintenance_type",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "String"
+        },
+        {
+          "id": "3117068036370008003",
+          "name": "fault_code",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "String"
+        },
+        {
+          "id": "3117068036370008004",
+          "name": "opened_ts",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "DateTime"
+        },
+        {
+          "id": "3117068036370008005",
+          "name": "closed_ts",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "DateTime"
+        },
+        {
+          "id": "3117068036370008006",
+          "name": "labor_cost_usd",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "Double"
+        },
+        {
+          "id": "3117068036370008007",
+          "name": "parts_cost_usd",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "Double"
+        },
+        {
+          "id": "3117068036370008008",
+          "name": "total_cost_usd",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "Double"
+        },
+        {
+          "id": "3117068036370008009",
+          "name": "odometer_at_service",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "BigInt"
+        },
+        {
+          "id": "3117068036370008010",
+          "name": "status",
+          "redefines": null,
+          "baseTypeNamespaceType": null,
+          "valueType": "String"
+        }
+      ],
+      "timeseriesProperties": [],
+      "dataBinding": {
+        "id": "00000000-0000-0000-0000-000000000008",
+        "dataBindingConfiguration": {
+          "dataBindingType": "NonTimeSeries",
+          "propertyBindings": [
+            {
+              "sourceColumnName": "maintenance_id",
+              "targetPropertyId": "3117068036370008001"
+            },
+            {
+              "sourceColumnName": "maintenance_type",
+              "targetPropertyId": "3117068036370008002"
+            },
+            {
+              "sourceColumnName": "fault_code",
+              "targetPropertyId": "3117068036370008003"
+            },
+            {
+              "sourceColumnName": "opened_ts",
+              "targetPropertyId": "3117068036370008004"
+            },
+            {
+              "sourceColumnName": "closed_ts",
+              "targetPropertyId": "3117068036370008005"
+            },
+            {
+              "sourceColumnName": "labor_cost_usd",
+              "targetPropertyId": "3117068036370008006"
+            },
+            {
+              "sourceColumnName": "parts_cost_usd",
+              "targetPropertyId": "3117068036370008007"
+            },
+            {
+              "sourceColumnName": "total_cost_usd",
+              "targetPropertyId": "3117068036370008008"
+            },
+            {
+              "sourceColumnName": "odometer_at_service",
+              "targetPropertyId": "3117068036370008009"
+            },
+            {
+              "sourceColumnName": "status",
+              "targetPropertyId": "3117068036370008010"
+            }
+          ],
+          "sourceTableProperties": {
+            "sourceType": "LakehouseTable",
+            "workspaceId": "__ZAVA_WORKSPACE_ID__",
+            "itemId": "__ZAVA_LAKEHOUSE_ID__",
+            "sourceTableName": "fact_maintenance",
+            "sourceSchema": "__ZAVA_GOLD_SCHEMA__"
+          }
+        }
+      }
+    }
+  ],
+  "relationshipTypes": [
+    {
+      "id": "3110733855940000001",
+      "namespace": "usertypes",
+      "namespaceType": "Custom",
+      "name": "located_at",
+      "source": {
+        "entityTypeId": "8813598896002"
+      },
+      "target": {
+        "entityTypeId": "8813598896001"
+      },
+      "contextualization": {
+        "id": "00000000-0000-0000-0000-000000000101",
+        "dataBindingTable": {
+          "sourceType": "LakehouseTable",
+          "workspaceId": "__ZAVA_WORKSPACE_ID__",
+          "itemId": "__ZAVA_LAKEHOUSE_ID__",
+          "sourceTableName": "dim_vehicle",
+          "sourceSchema": "__ZAVA_GOLD_SCHEMA__"
+        },
+        "sourceKeyRefBindings": [
+          {
+            "sourceColumnName": "vehicle_id",
+            "targetPropertyId": "3117068036370002001"
+          }
+        ],
+        "targetKeyRefBindings": [
+          {
+            "sourceColumnName": "current_site_id",
+            "targetPropertyId": "3117068036370001001"
+          }
+        ]
+      }
+    },
+    {
+      "id": "3110733855940000002",
+      "namespace": "usertypes",
+      "namespaceType": "Custom",
+      "name": "based_at",
+      "source": {
+        "entityTypeId": "8813598896002"
+      },
+      "target": {
+        "entityTypeId": "8813598896001"
+      },
+      "contextualization": {
+        "id": "00000000-0000-0000-0000-000000000102",
+        "dataBindingTable": {
+          "sourceType": "LakehouseTable",
+          "workspaceId": "__ZAVA_WORKSPACE_ID__",
+          "itemId": "__ZAVA_LAKEHOUSE_ID__",
+          "sourceTableName": "dim_vehicle",
+          "sourceSchema": "__ZAVA_GOLD_SCHEMA__"
+        },
+        "sourceKeyRefBindings": [
+          {
+            "sourceColumnName": "vehicle_id",
+            "targetPropertyId": "3117068036370002001"
+          }
+        ],
+        "targetKeyRefBindings": [
+          {
+            "sourceColumnName": "home_site_id",
+            "targetPropertyId": "3117068036370001001"
+          }
+        ]
+      }
+    },
+    {
+      "id": "3110733855940000003",
+      "namespace": "usertypes",
+      "namespaceType": "Custom",
+      "name": "isOfClass",
+      "source": {
+        "entityTypeId": "8813598896002"
+      },
+      "target": {
+        "entityTypeId": "8813598896003"
+      },
+      "contextualization": {
+        "id": "00000000-0000-0000-0000-000000000103",
+        "dataBindingTable": {
+          "sourceType": "LakehouseTable",
+          "workspaceId": "__ZAVA_WORKSPACE_ID__",
+          "itemId": "__ZAVA_LAKEHOUSE_ID__",
+          "sourceTableName": "dim_vehicle",
+          "sourceSchema": "__ZAVA_GOLD_SCHEMA__"
+        },
+        "sourceKeyRefBindings": [
+          {
+            "sourceColumnName": "vehicle_id",
+            "targetPropertyId": "3117068036370002001"
+          }
+        ],
+        "targetKeyRefBindings": [
+          {
+            "sourceColumnName": "vehicle_class_id",
+            "targetPropertyId": "3117068036370003001"
+          }
+        ]
+      }
+    },
+    {
+      "id": "3110733855940000004",
+      "namespace": "usertypes",
+      "namespaceType": "Custom",
+      "name": "places",
+      "source": {
+        "entityTypeId": "8813598896004"
+      },
+      "target": {
+        "entityTypeId": "8813598896005"
+      },
+      "contextualization": {
+        "id": "00000000-0000-0000-0000-000000000104",
+        "dataBindingTable": {
+          "sourceType": "LakehouseTable",
+          "workspaceId": "__ZAVA_WORKSPACE_ID__",
+          "itemId": "__ZAVA_LAKEHOUSE_ID__",
+          "sourceTableName": "fact_reservation",
+          "sourceSchema": "__ZAVA_GOLD_SCHEMA__"
+        },
+        "sourceKeyRefBindings": [
+          {
+            "sourceColumnName": "customer_id",
+            "targetPropertyId": "3117068036370004001"
+          }
+        ],
+        "targetKeyRefBindings": [
+          {
+            "sourceColumnName": "reservation_id",
+            "targetPropertyId": "3117068036370005001"
+          }
+        ]
+      }
+    },
+    {
+      "id": "3110733855940000005",
+      "namespace": "usertypes",
+      "namespaceType": "Custom",
+      "name": "requests",
+      "source": {
+        "entityTypeId": "8813598896005"
+      },
+      "target": {
+        "entityTypeId": "8813598896003"
+      },
+      "contextualization": {
+        "id": "00000000-0000-0000-0000-000000000105",
+        "dataBindingTable": {
+          "sourceType": "LakehouseTable",
+          "workspaceId": "__ZAVA_WORKSPACE_ID__",
+          "itemId": "__ZAVA_LAKEHOUSE_ID__",
+          "sourceTableName": "fact_reservation",
+          "sourceSchema": "__ZAVA_GOLD_SCHEMA__"
+        },
+        "sourceKeyRefBindings": [
+          {
+            "sourceColumnName": "reservation_id",
+            "targetPropertyId": "3117068036370005001"
+          }
+        ],
+        "targetKeyRefBindings": [
+          {
+            "sourceColumnName": "vehicle_class_id",
+            "targetPropertyId": "3117068036370003001"
+          }
+        ]
+      }
+    },
+    {
+      "id": "3110733855940000006",
+      "namespace": "usertypes",
+      "namespaceType": "Custom",
+      "name": "pickupAt",
+      "source": {
+        "entityTypeId": "8813598896005"
+      },
+      "target": {
+        "entityTypeId": "8813598896001"
+      },
+      "contextualization": {
+        "id": "00000000-0000-0000-0000-000000000106",
+        "dataBindingTable": {
+          "sourceType": "LakehouseTable",
+          "workspaceId": "__ZAVA_WORKSPACE_ID__",
+          "itemId": "__ZAVA_LAKEHOUSE_ID__",
+          "sourceTableName": "fact_reservation",
+          "sourceSchema": "__ZAVA_GOLD_SCHEMA__"
+        },
+        "sourceKeyRefBindings": [
+          {
+            "sourceColumnName": "reservation_id",
+            "targetPropertyId": "3117068036370005001"
+          }
+        ],
+        "targetKeyRefBindings": [
+          {
+            "sourceColumnName": "pickup_site_id",
+            "targetPropertyId": "3117068036370001001"
+          }
+        ]
+      }
+    },
+    {
+      "id": "3110733855940000007",
+      "namespace": "usertypes",
+      "namespaceType": "Custom",
+      "name": "holds",
+      "source": {
+        "entityTypeId": "8813598896004"
+      },
+      "target": {
+        "entityTypeId": "8813598896006"
+      },
+      "contextualization": {
+        "id": "00000000-0000-0000-0000-000000000107",
+        "dataBindingTable": {
+          "sourceType": "LakehouseTable",
+          "workspaceId": "__ZAVA_WORKSPACE_ID__",
+          "itemId": "__ZAVA_LAKEHOUSE_ID__",
+          "sourceTableName": "fact_rental",
+          "sourceSchema": "__ZAVA_GOLD_SCHEMA__"
+        },
+        "sourceKeyRefBindings": [
+          {
+            "sourceColumnName": "customer_id",
+            "targetPropertyId": "3117068036370004001"
+          }
+        ],
+        "targetKeyRefBindings": [
+          {
+            "sourceColumnName": "rental_id",
+            "targetPropertyId": "3117068036370006001"
+          }
+        ]
+      }
+    },
+    {
+      "id": "3110733855940000008",
+      "namespace": "usertypes",
+      "namespaceType": "Custom",
+      "name": "rentalOf",
+      "source": {
+        "entityTypeId": "8813598896006"
+      },
+      "target": {
+        "entityTypeId": "8813598896002"
+      },
+      "contextualization": {
+        "id": "00000000-0000-0000-0000-000000000108",
+        "dataBindingTable": {
+          "sourceType": "LakehouseTable",
+          "workspaceId": "__ZAVA_WORKSPACE_ID__",
+          "itemId": "__ZAVA_LAKEHOUSE_ID__",
+          "sourceTableName": "fact_rental",
+          "sourceSchema": "__ZAVA_GOLD_SCHEMA__"
+        },
+        "sourceKeyRefBindings": [
+          {
+            "sourceColumnName": "rental_id",
+            "targetPropertyId": "3117068036370006001"
+          }
+        ],
+        "targetKeyRefBindings": [
+          {
+            "sourceColumnName": "vehicle_id",
+            "targetPropertyId": "3117068036370002001"
+          }
+        ]
+      }
+    },
+    {
+      "id": "3110733855940000009",
+      "namespace": "usertypes",
+      "namespaceType": "Custom",
+      "name": "pickedUpAt",
+      "source": {
+        "entityTypeId": "8813598896006"
+      },
+      "target": {
+        "entityTypeId": "8813598896001"
+      },
+      "contextualization": {
+        "id": "00000000-0000-0000-0000-000000000109",
+        "dataBindingTable": {
+          "sourceType": "LakehouseTable",
+          "workspaceId": "__ZAVA_WORKSPACE_ID__",
+          "itemId": "__ZAVA_LAKEHOUSE_ID__",
+          "sourceTableName": "fact_rental",
+          "sourceSchema": "__ZAVA_GOLD_SCHEMA__"
+        },
+        "sourceKeyRefBindings": [
+          {
+            "sourceColumnName": "rental_id",
+            "targetPropertyId": "3117068036370006001"
+          }
+        ],
+        "targetKeyRefBindings": [
+          {
+            "sourceColumnName": "pickup_site_id",
+            "targetPropertyId": "3117068036370001001"
+          }
+        ]
+      }
+    },
+    {
+      "id": "3110733855940000010",
+      "namespace": "usertypes",
+      "namespaceType": "Custom",
+      "name": "returnedAt",
+      "source": {
+        "entityTypeId": "8813598896006"
+      },
+      "target": {
+        "entityTypeId": "8813598896001"
+      },
+      "contextualization": {
+        "id": "00000000-0000-0000-0000-000000000110",
+        "dataBindingTable": {
+          "sourceType": "LakehouseTable",
+          "workspaceId": "__ZAVA_WORKSPACE_ID__",
+          "itemId": "__ZAVA_LAKEHOUSE_ID__",
+          "sourceTableName": "fact_rental",
+          "sourceSchema": "__ZAVA_GOLD_SCHEMA__"
+        },
+        "sourceKeyRefBindings": [
+          {
+            "sourceColumnName": "rental_id",
+            "targetPropertyId": "3117068036370006001"
+          }
+        ],
+        "targetKeyRefBindings": [
+          {
+            "sourceColumnName": "return_site_id",
+            "targetPropertyId": "3117068036370001001"
+          }
+        ]
+      }
+    },
+    {
+      "id": "3110733855940000011",
+      "namespace": "usertypes",
+      "namespaceType": "Custom",
+      "name": "fulfills",
+      "source": {
+        "entityTypeId": "8813598896006"
+      },
+      "target": {
+        "entityTypeId": "8813598896005"
+      },
+      "contextualization": {
+        "id": "00000000-0000-0000-0000-000000000111",
+        "dataBindingTable": {
+          "sourceType": "LakehouseTable",
+          "workspaceId": "__ZAVA_WORKSPACE_ID__",
+          "itemId": "__ZAVA_LAKEHOUSE_ID__",
+          "sourceTableName": "fact_rental",
+          "sourceSchema": "__ZAVA_GOLD_SCHEMA__"
+        },
+        "sourceKeyRefBindings": [
+          {
+            "sourceColumnName": "rental_id",
+            "targetPropertyId": "3117068036370006001"
+          }
+        ],
+        "targetKeyRefBindings": [
+          {
+            "sourceColumnName": "reservation_id",
+            "targetPropertyId": "3117068036370005001"
+          }
+        ]
+      }
+    },
+    {
+      "id": "3110733855940000012",
+      "namespace": "usertypes",
+      "namespaceType": "Custom",
+      "name": "settles",
+      "source": {
+        "entityTypeId": "8813598896007"
+      },
+      "target": {
+        "entityTypeId": "8813598896006"
+      },
+      "contextualization": {
+        "id": "00000000-0000-0000-0000-000000000112",
+        "dataBindingTable": {
+          "sourceType": "LakehouseTable",
+          "workspaceId": "__ZAVA_WORKSPACE_ID__",
+          "itemId": "__ZAVA_LAKEHOUSE_ID__",
+          "sourceTableName": "fact_payment",
+          "sourceSchema": "__ZAVA_GOLD_SCHEMA__"
+        },
+        "sourceKeyRefBindings": [
+          {
+            "sourceColumnName": "payment_id",
+            "targetPropertyId": "3117068036370007001"
+          }
+        ],
+        "targetKeyRefBindings": [
+          {
+            "sourceColumnName": "rental_id",
+            "targetPropertyId": "3117068036370006001"
+          }
+        ]
+      }
+    },
+    {
+      "id": "3110733855940000013",
+      "namespace": "usertypes",
+      "namespaceType": "Custom",
+      "name": "services",
+      "source": {
+        "entityTypeId": "8813598896008"
+      },
+      "target": {
+        "entityTypeId": "8813598896002"
+      },
+      "contextualization": {
+        "id": "00000000-0000-0000-0000-000000000113",
+        "dataBindingTable": {
+          "sourceType": "LakehouseTable",
+          "workspaceId": "__ZAVA_WORKSPACE_ID__",
+          "itemId": "__ZAVA_LAKEHOUSE_ID__",
+          "sourceTableName": "fact_maintenance",
+          "sourceSchema": "__ZAVA_GOLD_SCHEMA__"
+        },
+        "sourceKeyRefBindings": [
+          {
+            "sourceColumnName": "maintenance_id",
+            "targetPropertyId": "3117068036370008001"
+          }
+        ],
+        "targetKeyRefBindings": [
+          {
+            "sourceColumnName": "vehicle_id",
+            "targetPropertyId": "3117068036370002001"
+          }
+        ]
+      }
+    },
+    {
+      "id": "3110733855940000014",
+      "namespace": "usertypes",
+      "namespaceType": "Custom",
+      "name": "performedAt",
+      "source": {
+        "entityTypeId": "8813598896008"
+      },
+      "target": {
+        "entityTypeId": "8813598896001"
+      },
+      "contextualization": {
+        "id": "00000000-0000-0000-0000-000000000114",
+        "dataBindingTable": {
+          "sourceType": "LakehouseTable",
+          "workspaceId": "__ZAVA_WORKSPACE_ID__",
+          "itemId": "__ZAVA_LAKEHOUSE_ID__",
+          "sourceTableName": "fact_maintenance",
+          "sourceSchema": "__ZAVA_GOLD_SCHEMA__"
+        },
+        "sourceKeyRefBindings": [
+          {
+            "sourceColumnName": "maintenance_id",
+            "targetPropertyId": "3117068036370008001"
+          }
+        ],
+        "targetKeyRefBindings": [
+          {
+            "sourceColumnName": "site_id",
+            "targetPropertyId": "3117068036370001001"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "SemanticModel",
+    "displayName": "Zava Fleet Analytics",
+    "description": "Direct Lake on OneLake semantic model over the Step-13 thin gold (V-Ordered Delta) aggregates and the Zava gold star schema. Blue Zava theme. Authored as code (TMDL)."
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "00000000-0000-0000-0000-000000000000"
+  }
+}

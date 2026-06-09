@@ -1,0 +1,104 @@
+/// Idle vehicles by site (thin gold, V-Ordered). Counts vehicles by status at each vehicle's
+/// current site so the report can flag over-parked sites on the map.
+table agg_idle_vehicles_by_site
+	lineageTag: 22222222-0000-0000-0000-000000000007
+
+	measure 'Idle Vehicle Count' = SUM('agg_idle_vehicles_by_site'[idle_vehicles])
+		formatString: #,##0
+		displayFolder: Fleet Status
+		annotation Zava_KPI = idle_vehicles
+
+	measure 'Fleet Size' = SUM('agg_idle_vehicles_by_site'[vehicles_at_site])
+		formatString: #,##0
+		displayFolder: Fleet Status
+
+	measure 'Idle Vehicle %' = DIVIDE(SUM('agg_idle_vehicles_by_site'[idle_vehicles]), SUM('agg_idle_vehicles_by_site'[vehicles_at_site]))
+		formatString: 0.0%;-0.0%;0.0%
+		displayFolder: Fleet Status
+
+	measure 'Vehicles In Maintenance' = SUM('agg_idle_vehicles_by_site'[maintenance_vehicles])
+		formatString: #,##0
+		displayFolder: Fleet Status
+
+	column current_site_id
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: current_site_id
+
+	column vehicles_at_site
+		dataType: int64
+		isHidden
+		summarizeBy: sum
+		sourceColumn: vehicles_at_site
+
+	column idle_vehicles
+		dataType: int64
+		isHidden
+		summarizeBy: sum
+		sourceColumn: idle_vehicles
+
+	column rented_vehicles
+		dataType: int64
+		isHidden
+		summarizeBy: sum
+		sourceColumn: rented_vehicles
+
+	column maintenance_vehicles
+		dataType: int64
+		isHidden
+		summarizeBy: sum
+		sourceColumn: maintenance_vehicles
+
+	column site_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: site_name
+
+	column city
+		dataType: string
+		summarizeBy: none
+		sourceColumn: city
+		dataCategory: City
+
+	column state
+		dataType: string
+		summarizeBy: none
+		sourceColumn: state
+		dataCategory: StateOrProvince
+
+	column latitude
+		dataType: double
+		summarizeBy: none
+		sourceColumn: latitude
+		dataCategory: Latitude
+
+	column longitude
+		dataType: double
+		summarizeBy: none
+		sourceColumn: longitude
+		dataCategory: Longitude
+
+	column is_hq
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: is_hq
+
+	column parking_capacity
+		dataType: int64
+		summarizeBy: none
+		sourceColumn: parking_capacity
+
+	column idle_ratio_pct
+		dataType: double
+		summarizeBy: none
+		sourceColumn: idle_ratio_pct
+
+	partition agg_idle_vehicles_by_site = entity
+		mode: directLake
+		source
+			entityName: agg_idle_vehicles_by_site
+			schemaName: thin_gold
+			expressionSource: DatabaseQuery
+
+	annotation Zava_Entity = IdleVehicles

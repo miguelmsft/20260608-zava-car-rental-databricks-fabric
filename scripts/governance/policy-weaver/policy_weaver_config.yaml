@@ -1,0 +1,103 @@
+# =====================================================================================
+# Zava — Policy Weaver configuration (Step 21, research R5)
+# microsoft/Policy-Weaver v0.4.0 (MIT, Beta — "accelerator, provided as-is")
+# =====================================================================================
+# PURPOSE
+#   Sync the Databricks Unity Catalog ACCESS POLICIES authored in Step 9
+#   (databricks/uc/05_access_policies.sql) into Microsoft Fabric OneLake Security
+#   data-access roles, so the SAME row-level / column-level security that Unity Catalog
+#   enforces for Databricks queries is also enforced when business users read the
+#   MIRRORED data through Fabric / Power BI Direct Lake.
+#
+#     * ROW FILTER  -> `zava.curated.rentals_curated` filtered ON `site_city`
+#                      (a site manager sees only their city's rentals).
+#     * COLUMN MASK -> `zava.gold.dim_customer.email` (PII masked for non-authorized
+#                      principals; Fabric maps this to binary include/exclude of the column).
+#
+# ONE SOURCE CATALOG PER RUN
+#   Policy Weaver 0.4.0 supports exactly ONE source catalog per config/run (R5 §1, Issue #20).
+#   This config targets the single `zava` catalog. Run Policy Weaver again with a separate
+#   config for any additional catalog.
+#
+# SECRETS — PUBLIC REPO, NONE COMMITTED
+#   This file is a TEMPLATE. The credential fields below use `${env_var}`-style placeholders that
+#   `run_policy_weaver.py` resolves at runtime from environment variables OR Azure Key Vault
+#   (`--keyvault <name>`). Never replace these placeholders with literal secret values in a
+#   committed file. The runner renders a transient, restricted-permission config and deletes
+#   it after the sync; the rendered file is never written in `--dry-run`.
+#
+# KEY MATCHING
+#   Keys/sections match the Policy Weaver 0.4.0 schema (R5 §4.1 / §5.1): keyvault, fabric,
+#   constraints, service_principal, source, type, databricks. `DatabricksSourceMap.from_yaml`
+#   parses this shape.
+# =====================================================================================
+
+# ---- Key Vault (optional secret store) ----------------------------------------------
+# Policy Weaver can pull secrets from Azure Key Vault natively. We default to `false` here
+# because `run_policy_weaver.py` performs the env-var / Key Vault substitution itself and
+# hands Policy Weaver an already-resolved config. To use Policy Weaver's NATIVE Key Vault
+# path instead, set `use_key_vault: true`, fill `name`, and choose an `authentication_method`
+# of `azure_cli` (CI / local `az login`) or `fabric_notebook` (running inside a Fabric notebook).
+keyvault:
+  use_key_vault: false
+  name: notapplicable
+  authentication_method: notapplicable
+
+# ---- Fabric target (Step 10/11/12 — OneLake mirrored catalog) -----------------------
+# `mirror_id` + `workspace_id` identify the mirrored Databricks catalog item in Fabric whose
+# OneLake Security roles Policy Weaver writes via the `dataAccessRoles` REST API. OneLake
+# Security must already be enabled on the mirrored item ("Manage OneLake data access" — a
+# Fabric UI step, see manual-steps appendix). `tenant_id` is the Entra tenant.
+fabric:
+  mirror_id: ${FABRIC_MIRROR_ID}
+  mirror_name: zava
+  workspace_id: ${FABRIC_WORKSPACE_ID}
+  tenant_id: ${AZURE_TENANT_ID}
+  # Suffix appended to every Policy-Weaver-managed role; lets re-runs match & manage only
+  # its own roles (idempotent insert/update/delete) and leave hand-made roles untouched.
+  fabric_role_suffix: PWPolicy
+  # Remove Fabric's auto-created broad-access DefaultReader role so Policy Weaver owns access.
+  delete_default_reader_role: true
+  # `role_based` is REQUIRED for column- and row-level security sync (R5 §2.5 / §5.2).
+  policy_mapping: role_based
+
+# ---- Constraints (CLS / RLS) --------------------------------------------------------
+# Enable both column- and row-level security mapping. `fallback: deny` is the R5-recommended
+# safe default: any UC mask/filter pattern Policy Weaver cannot faithfully translate denies
+# access rather than risk unintended exposure.
+constraints:
+  columns:
+    columnlevelsecurity: true
+    fallback: deny
+  rows:
+    rowlevelsecurity: true
+    fallback: deny
+
+# ---- Service principal (Fabric + Graph + Databricks Workspace auth) -----------------
+# A single Entra service principal authenticates to the Fabric REST API, Microsoft Graph
+# (identity resolution, needs `User.Read.All`), and the Databricks Workspace API. Resolved
+# from env / Key Vault by the runner — NEVER hard-code.
+service_principal:
+  client_id: ${AZURE_CLIENT_ID}
+  client_secret: ${AZURE_CLIENT_SECRET}
+  tenant_id: ${AZURE_TENANT_ID}
+
+# ---- Source: the single Databricks UC catalog (Step 8 gold + Step 9 policies) -------
+# `name` is the ONE source catalog. `schemas` scopes the sync to where the Step 9 policies
+# live: `curated` (rentals_curated row filter) and `gold` (dim_customer email column mask).
+source:
+  name: zava
+  schemas:
+    - name: curated
+    - name: gold
+
+# Source type — Unity Catalog connector.
+type: UNITY_CATALOG
+
+# ---- Databricks Account API (reads grants / groups / row filters / column masks) ----
+# The Account API uses a SEPARATE OAuth secret generated for the SP in the Databricks
+# Account Admin Console (R5 §6.1). Resolved from env / Key Vault by the runner.
+databricks:
+  workspace_url: ${DATABRICKS_WORKSPACE_URL}
+  account_id: ${DATABRICKS_ACCOUNT_ID}
+  account_api_token: ${DATABRICKS_ACCOUNT_API_TOKEN}

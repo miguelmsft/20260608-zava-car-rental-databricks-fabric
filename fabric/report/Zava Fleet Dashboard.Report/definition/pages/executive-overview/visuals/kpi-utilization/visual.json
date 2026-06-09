@@ -1,0 +1,36 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/1.0.0/schema.json",
+  "name": "a1000000000000000000000000000011",
+  "position": { "x": 336, "y": 96, "z": 11, "width": 296, "height": 150, "tabOrder": 20 },
+  "visual": {
+    "visualType": "card",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": { "SourceRef": { "Entity": "agg_fleet_utilization_by_site_month" } },
+                  "Property": "Fleet Utilization %"
+                }
+              },
+              "queryRef": "agg_fleet_utilization_by_site_month.Fleet Utilization %",
+              "nativeQueryRef": "Fleet Utilization %"
+            }
+          ]
+        }
+      }
+    },
+    "objects": {
+      "labels": [
+        {
+          "properties": {
+            "color": { "solid": { "color": { "expr": { "Literal": { "Value": "'#1565C0'" } } } } }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

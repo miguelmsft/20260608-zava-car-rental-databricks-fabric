@@ -1,0 +1,116 @@
+/// Vehicles — the Zava fleet enriched with its VehicleClass (rate card). `status` drives the idle KPI.
+table dim_vehicle
+	lineageTag: 22222222-0000-0000-0000-000000000002
+
+	column vehicle_id
+		dataType: int64
+		isKey
+		summarizeBy: none
+		sourceColumn: vehicle_id
+
+	column vin
+		dataType: string
+		summarizeBy: none
+		sourceColumn: vin
+
+	column make
+		dataType: string
+		summarizeBy: none
+		sourceColumn: make
+
+	column model
+		dataType: string
+		summarizeBy: none
+		sourceColumn: model
+
+	column model_year
+		dataType: int64
+		summarizeBy: none
+		sourceColumn: model_year
+
+	column color
+		dataType: string
+		summarizeBy: none
+		sourceColumn: color
+
+	column license_plate
+		dataType: string
+		summarizeBy: none
+		sourceColumn: license_plate
+
+	column status
+		dataType: string
+		summarizeBy: none
+		sourceColumn: status
+
+	column odometer_miles
+		dataType: double
+		summarizeBy: sum
+		sourceColumn: odometer_miles
+
+	column acquired_date
+		dataType: dateTime
+		formatString: Long Date
+		summarizeBy: none
+		sourceColumn: acquired_date
+
+	column home_site_id
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: home_site_id
+
+	column current_site_id
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: current_site_id
+
+	column vehicle_class_id
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: vehicle_class_id
+
+	column class_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: class_name
+
+	column category
+		dataType: string
+		summarizeBy: none
+		sourceColumn: category
+
+	column daily_base_rate_usd
+		dataType: double
+		formatString: \$#,0.00;(\$#,0.00);\$#,0.00
+		summarizeBy: none
+		sourceColumn: daily_base_rate_usd
+
+	column seats
+		dataType: int64
+		summarizeBy: none
+		sourceColumn: seats
+
+	column is_ev
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: is_ev
+
+	hierarchy Fleet
+		level Category
+			column: category
+		level Class
+			column: class_name
+		level Vehicle
+			column: vin
+
+	partition dim_vehicle = entity
+		mode: directLake
+		source
+			entityName: dim_vehicle
+			schemaName: gold
+			expressionSource: DatabaseQuery
+
+	annotation Zava_Entity = Vehicles

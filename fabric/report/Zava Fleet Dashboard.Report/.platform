@@ -1,0 +1,12 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Report",
+    "displayName": "Zava Fleet Dashboard",
+    "description": "Zava car-rental Power BI report (PBIP/PBIR) bound to the Step-14 Direct Lake on OneLake semantic model 'Zava Fleet Analytics'. Blue Zava theme; pages: Executive overview (KPI cards), multi-city map, decomposition tree, and revenue forecast. Authored as code (PBIR)."
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "00000000-0000-0000-0000-000000000000"
+  }
+}

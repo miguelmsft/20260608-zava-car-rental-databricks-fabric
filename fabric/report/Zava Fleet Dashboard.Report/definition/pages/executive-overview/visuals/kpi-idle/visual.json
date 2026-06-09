@@ -1,0 +1,36 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/1.0.0/schema.json",
+  "name": "a1000000000000000000000000000012",
+  "position": { "x": 648, "y": 96, "z": 12, "width": 296, "height": 150, "tabOrder": 30 },
+  "visual": {
+    "visualType": "card",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": { "SourceRef": { "Entity": "agg_idle_vehicles_by_site" } },
+                  "Property": "Idle Vehicle Count"
+                }
+              },
+              "queryRef": "agg_idle_vehicles_by_site.Idle Vehicle Count",
+              "nativeQueryRef": "Idle Vehicle Count"
+            }
+          ]
+        }
+      }
+    },
+    "objects": {
+      "labels": [
+        {
+          "properties": {
+            "color": { "solid": { "color": { "expr": { "Literal": { "Value": "'#1E88E5'" } } } } }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}
